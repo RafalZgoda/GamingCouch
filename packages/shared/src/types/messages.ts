@@ -27,6 +27,6 @@ export type ServerToClientMessage =
   | { type: 'ROOM_STATUS_CHANGED'; status: import('./room').RoomStatus }
   | { type: 'GAME_STARTED'; gameId: string }
   | { type: 'CONTROLLER_LAYOUT'; layout: ControllerLayout }
-  | { type: 'GAME_STATE_UPDATE'; state: unknown }
-  | { type: 'GAME_ENDED'; scores: Record<string, number> }
+  | { type: 'GAME_STATE_UPDATE'; state: import('./game').GameState }
+  | { type: 'GAME_ENDED'; scores: Record<string, number>; winner: string | null }
   | { type: 'ERROR'; message: string };

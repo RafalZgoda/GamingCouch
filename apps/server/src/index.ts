@@ -5,6 +5,9 @@ import { WebSocketServer } from 'ws';
 import { WS_PORT } from '@gamingcouch/shared';
 import { RoomManager } from './rooms/RoomManager.js';
 import { setupWebSocketServer } from './ws/handler.js';
+import { GameRegistry } from './games/GameRegistry.js';
+// Side-effect imports: register all built-in games
+import './games/registry/index.js';
 
 const app = express();
 app.use(cors());
@@ -14,6 +17,11 @@ const roomManager = new RoomManager();
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// List all available games (used by host lobby to populate game picker)
+app.get('/api/games', (_req, res) => {
+  res.json(GameRegistry.list());
 });
 
 // Look up a room by code (used by join page to validate before WS connect)
