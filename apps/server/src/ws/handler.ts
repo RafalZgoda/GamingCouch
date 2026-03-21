@@ -1,9 +1,10 @@
 import { WebSocket, WebSocketServer } from 'ws';
-import { ClientToServerMessage, ServerToClientMessage } from '@gamingcouch/shared';
+import { ClientToServerMessage, ServerToClientMessage, ControllerLayout } from '@gamingcouch/shared';
 import { RoomManager } from '../rooms/RoomManager.js';
 
 export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomManager) {
   const clients = new Map<string, WebSocket>(); // socketId -> WebSocket
+  const roomLayouts = new Map<string, ControllerLayout>(); // roomId -> ControllerLayout
 
   function send(ws: WebSocket, msg: ServerToClientMessage) {
     if (ws.readyState === WebSocket.OPEN) {
@@ -94,6 +95,29 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
           room.currentGame = msg.gameId;
           const allSocketIds = room.players.map((p) => p.socketId);
           broadcast(allSocketIds, { type: 'GAME_STARTED', gameId: msg.gameId });
+          // If there's a stored layout for this room, send it to players now
+          const existingLayout = roomLayouts.get(room.id);
+          if (existingLayout) {
+            const playerSocketIds = room.players
+              .filter((p) => p.socketId !== socketId)
+              .map((p) => p.socketId);
+            broadcast(playerSocketIds, { type: 'CONTROLLER_LAYOUT', layout: existingLayout });
+          }
+          break;
+        }
+
+        case 'HOST_SET_CONTROLLER_LAYOUT': {
+          const room = roomManager.getRoomBySocketId(socketId);
+          if (!room || room.hostSocketId !== socketId) {
+            send(ws, { type: 'ERROR', message: 'Not authorized' });
+            return;
+          }
+          roomLayouts.set(room.id, msg.layout);
+          // Broadcast to all non-host players
+          const playerSocketIds = room.players
+            .filter((p) => p.socketId !== socketId)
+            .map((p) => p.socketId);
+          broadcast(playerSocketIds, { type: 'CONTROLLER_LAYOUT', layout: msg.layout });
           break;
         }
 
@@ -124,7 +148,8 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
         const allSocketIds = result.room.players.map((p) => p.socketId);
         broadcast(allSocketIds, { type: 'PLAYER_LEFT', playerId: result.playerId });
         if (result.wasHost) {
-          // Host disconnected — close room
+          // Host disconnected — close room and clean up layout
+          roomLayouts.delete(result.room.id);
           roomManager.closeRoom(result.room.id);
           broadcast(allSocketIds, { type: 'ERROR', message: 'Host disconnected. Room closed.' });
         }
