@@ -7,11 +7,11 @@ import {
   AvatarColor,
   AVATAR_COLORS,
   AVATAR_COLOR_HEX,
-  WS_PORT,
   ControllerLayout,
   ControllerInputEvent,
 } from '@gamingcouch/shared';
 import ControllerView from './ControllerView';
+import { getWsUrl } from '@/lib/wsUrl';
 
 type ConnStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
@@ -46,7 +46,7 @@ export default function JoinPage() {
     setConnStatus(isReconnect ? 'reconnecting' : 'connecting');
     setError('');
 
-    const ws = new WebSocket(`ws://localhost:${WS_PORT}`);
+    const ws = new WebSocket(getWsUrl());
     wsRef.current = ws;
 
     ws.onopen = () => {

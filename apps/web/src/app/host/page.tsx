@@ -8,9 +8,9 @@ import {
   Player,
   GameState,
   AVATAR_COLOR_HEX,
-  WS_PORT,
   MIN_PLAYERS_TO_START,
 } from '@gamingcouch/shared';
+import { getWsUrl } from '@/lib/wsUrl';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -411,7 +411,7 @@ export default function HostPage() {
   }, []);
 
   useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:${WS_PORT}`);
+    const ws = new WebSocket(getWsUrl());
     wsRef.current = ws;
 
     ws.onopen = () => {

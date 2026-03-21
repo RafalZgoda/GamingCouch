@@ -52,6 +52,8 @@ const wss = new WebSocketServer({ server });
 
 setupWebSocketServer(wss, roomManager);
 
-server.listen(WS_PORT, () => {
-  console.log(`GamingCouch server running on port ${WS_PORT}`);
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : WS_PORT;
+
+server.listen(port, () => {
+  console.log(`GamingCouch server running on port ${port}`);
 });
