@@ -1,10 +1,14 @@
+import type { AvatarColor } from './room';
+
 /**
  * Messages sent from clients (phone controllers / host) to the server.
  */
 export type ClientToServerMessage =
-  | { type: 'HOST_CREATE_ROOM' }
-  | { type: 'PLAYER_JOIN_ROOM'; code: string; playerName: string }
+  | { type: 'HOST_CREATE_ROOM'; maxPlayers?: number }
+  | { type: 'PLAYER_JOIN_ROOM'; code: string; playerName: string; avatarColor: AvatarColor }
+  | { type: 'PLAYER_READY' }
   | { type: 'HOST_START_GAME'; gameId: string }
+  | { type: 'HOST_KICK_PLAYER'; playerId: string }
   | { type: 'PLAYER_INPUT'; payload: unknown }
   | { type: 'HOST_END_GAME' };
 
@@ -16,6 +20,9 @@ export type ServerToClientMessage =
   | { type: 'ROOM_JOINED'; room: import('./room').Room }
   | { type: 'PLAYER_JOINED'; player: import('./room').Player }
   | { type: 'PLAYER_LEFT'; playerId: string }
+  | { type: 'PLAYER_READY_CHANGED'; playerId: string; isReady: boolean }
+  | { type: 'PLAYER_KICKED'; playerId: string }
+  | { type: 'ROOM_STATUS_CHANGED'; status: import('./room').RoomStatus }
   | { type: 'GAME_STARTED'; gameId: string }
   | { type: 'GAME_STATE_UPDATE'; state: unknown }
   | { type: 'GAME_ENDED'; scores: Record<string, number> }

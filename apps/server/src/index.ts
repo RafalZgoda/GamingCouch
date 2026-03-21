@@ -10,13 +10,37 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+const roomManager = new RoomManager();
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Look up a room by code (used by join page to validate before WS connect)
+app.get('/api/rooms/:code', (req, res) => {
+  const room = roomManager.getRoomByCode(req.params.code.toUpperCase());
+  if (!room) {
+    res.status(404).json({ error: 'Room not found' });
+    return;
+  }
+  if (room.status !== 'waiting') {
+    res.status(409).json({ error: 'Room already started' });
+    return;
+  }
+  if (room.players.length >= room.maxPlayers) {
+    res.status(409).json({ error: 'Room is full' });
+    return;
+  }
+  res.json({
+    code: room.code,
+    playerCount: room.players.length,
+    maxPlayers: room.maxPlayers,
+    status: room.status,
+  });
+});
+
 const server = createServer(app);
 const wss = new WebSocketServer({ server });
-const roomManager = new RoomManager();
 
 setupWebSocketServer(wss, roomManager);
 

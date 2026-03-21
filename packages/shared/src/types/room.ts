@@ -1,4 +1,24 @@
-export type RoomStatus = 'waiting' | 'playing' | 'finished';
+export type RoomStatus = 'waiting' | 'ready' | 'playing' | 'finished';
+
+export type AvatarColor =
+  | 'red'
+  | 'orange'
+  | 'yellow'
+  | 'green'
+  | 'blue'
+  | 'purple'
+  | 'pink'
+  | 'teal';
+
+export interface Player {
+  id: string;
+  socketId: string;
+  name: string;
+  avatarColor: AvatarColor;
+  isHost: boolean;
+  isReady: boolean;
+  joinedAt: number;
+}
 
 export interface Room {
   id: string;
@@ -7,13 +27,6 @@ export interface Room {
   status: RoomStatus;
   players: Player[];
   currentGame: string | null;
+  maxPlayers: number;
   createdAt: number;
-}
-
-export interface Player {
-  id: string;
-  socketId: string;
-  name: string;
-  isHost: boolean;
-  joinedAt: number;
 }

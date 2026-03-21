@@ -3,20 +3,20 @@ import { ClientToServerMessage, ServerToClientMessage } from '@gamingcouch/share
 import { RoomManager } from '../rooms/RoomManager.js';
 
 export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomManager) {
+  const clients = new Map<string, WebSocket>(); // socketId -> WebSocket
+
   function send(ws: WebSocket, msg: ServerToClientMessage) {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(msg));
     }
   }
 
-  function broadcast(socketIds: string[], msg: ServerToClientMessage, clients: Map<string, WebSocket>) {
+  function broadcast(socketIds: string[], msg: ServerToClientMessage) {
     for (const id of socketIds) {
       const ws = clients.get(id);
       if (ws) send(ws, msg);
     }
   }
-
-  const clients = new Map<string, WebSocket>(); // socketId -> WebSocket
 
   wss.on('connection', (ws) => {
     const socketId = crypto.randomUUID();
@@ -33,21 +33,54 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
 
       switch (msg.type) {
         case 'HOST_CREATE_ROOM': {
-          const room = roomManager.createRoom(socketId);
+          const room = roomManager.createRoom(socketId, msg.maxPlayers);
           send(ws, { type: 'ROOM_CREATED', roomCode: room.code, roomId: room.id });
           break;
         }
 
         case 'PLAYER_JOIN_ROOM': {
-          const result = roomManager.joinRoom(msg.code, msg.playerName, socketId);
+          const result = roomManager.joinRoom(msg.code, msg.playerName, msg.avatarColor, socketId);
           if (!result) {
-            send(ws, { type: 'ERROR', message: 'Room not found or full' });
+            send(ws, { type: 'ERROR', message: 'Room not found, full, or already started' });
             return;
           }
           const { room, player } = result;
           send(ws, { type: 'ROOM_JOINED', room });
-          const allSocketIds = room.players.map((p) => p.socketId).filter((id) => id !== socketId);
-          broadcast(allSocketIds, { type: 'PLAYER_JOINED', player }, clients);
+          const otherSocketIds = room.players
+            .map((p) => p.socketId)
+            .filter((id) => id !== socketId);
+          broadcast(otherSocketIds, { type: 'PLAYER_JOINED', player });
+          break;
+        }
+
+        case 'PLAYER_READY': {
+          const result = roomManager.setPlayerReady(socketId, true);
+          if (!result) return;
+          const { room, player } = result;
+          const allSocketIds = room.players.map((p) => p.socketId);
+          broadcast(allSocketIds, {
+            type: 'PLAYER_READY_CHANGED',
+            playerId: player.id,
+            isReady: player.isReady,
+          });
+          if (room.status === 'ready') {
+            broadcast(allSocketIds, { type: 'ROOM_STATUS_CHANGED', status: 'ready' });
+          }
+          break;
+        }
+
+        case 'HOST_KICK_PLAYER': {
+          const result = roomManager.kickPlayer(socketId, msg.playerId);
+          if (!result) {
+            send(ws, { type: 'ERROR', message: 'Cannot kick that player' });
+            return;
+          }
+          const { room, playerId } = result;
+          const allSocketIds = room.players.map((p) => p.socketId);
+          broadcast(allSocketIds, { type: 'PLAYER_KICKED', playerId });
+          // The kicked player's WS is no longer in room; send them an error too
+          // We look them up via the playerId which we no longer have socketId for,
+          // but the client should handle PLAYER_KICKED and disconnect gracefully.
           break;
         }
 
@@ -60,7 +93,7 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
           room.status = 'playing';
           room.currentGame = msg.gameId;
           const allSocketIds = room.players.map((p) => p.socketId);
-          broadcast(allSocketIds, { type: 'GAME_STARTED', gameId: msg.gameId }, clients);
+          broadcast(allSocketIds, { type: 'GAME_STARTED', gameId: msg.gameId });
           break;
         }
 
@@ -78,7 +111,7 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
           room.status = 'finished';
           room.currentGame = null;
           const allSocketIds = room.players.map((p) => p.socketId);
-          broadcast(allSocketIds, { type: 'GAME_ENDED', scores: {} }, clients);
+          broadcast(allSocketIds, { type: 'GAME_ENDED', scores: {} });
           break;
         }
       }
@@ -89,7 +122,12 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
       const result = roomManager.removePlayer(socketId);
       if (result) {
         const allSocketIds = result.room.players.map((p) => p.socketId);
-        broadcast(allSocketIds, { type: 'PLAYER_LEFT', playerId: result.playerId }, clients);
+        broadcast(allSocketIds, { type: 'PLAYER_LEFT', playerId: result.playerId });
+        if (result.wasHost) {
+          // Host disconnected — close room
+          roomManager.closeRoom(result.room.id);
+          broadcast(allSocketIds, { type: 'ERROR', message: 'Host disconnected. Room closed.' });
+        }
       }
     });
   });
