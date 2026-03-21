@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { WS_PORT } from '@gamingcouch/shared';
 import { RoomManager } from './rooms/RoomManager.js';
 import { setupWebSocketServer } from './ws/handler.js';
@@ -9,9 +11,15 @@ import { GameRegistry } from './games/GameRegistry.js';
 // Side-effect imports: register all built-in games
 import './games/registry/index.js';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve the Next.js static export when present (production combined deploy)
+const webOutDir = join(__dirname, '../../web/out');
+app.use(express.static(webOutDir));
 
 const roomManager = new RoomManager();
 
@@ -44,6 +52,13 @@ app.get('/api/rooms/:code', (req, res) => {
     playerCount: room.players.length,
     maxPlayers: room.maxPlayers,
     status: room.status,
+  });
+});
+
+// SPA fallback: serve index.html for any unmatched route (Next.js client routing)
+app.use((_req, res) => {
+  res.sendFile(join(webOutDir, 'index.html'), (err) => {
+    if (err) res.status(404).send('Not found');
   });
 });
 
