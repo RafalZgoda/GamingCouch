@@ -5,5 +5,4 @@
  */
 
 // Games are registered by their own modules via side-effect imports.
-// Example (add as games are built):
-//   import '../trivia/TriviaGame.js';
+import '../trivia/TriviaGame.js';

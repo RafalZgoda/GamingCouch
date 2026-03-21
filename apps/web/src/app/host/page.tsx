@@ -6,6 +6,7 @@ import {
   ServerToClientMessage,
   ClientToServerMessage,
   Player,
+  GameState,
   AVATAR_COLOR_HEX,
   WS_PORT,
   MIN_PLAYERS_TO_START,
@@ -19,6 +20,18 @@ interface Toast {
   id: number;
   message: string;
   color: string;
+}
+
+// Trivia-specific data shape matching TriviaData on the server
+interface TriviaData {
+  question: string;
+  options: string[];
+  questionIndex: number;
+  totalQuestions: number;
+  timeRemainingMs: number;
+  answeredPlayerIds: string[];
+  correctAnswer?: number;
+  playerAnswers?: Record<string, number>;
 }
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -68,16 +81,237 @@ function ToastContainer({ toasts }: { toasts: Toast[] }) {
   );
 }
 
+// ── Trivia Host View ──────────────────────────────────────────────────────────
+
+const ANSWER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+const ANSWER_LABELS = ['A', 'B', 'C', 'D'];
+
+function TriviaHostView({
+  state,
+  players,
+}: {
+  state: GameState;
+  players: Player[];
+}) {
+  const data = state.data as TriviaData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const isReveal = state.phase === 'round_end';
+  const timerFraction = data.timeRemainingMs / 20_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* ── Main area ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden' }}>
+
+        {/* Progress + timer */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+            Question {data.questionIndex + 1} / {data.totalQuestions}
+          </span>
+          <div style={{ flex: 1, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${(data.questionIndex / data.totalQuestions) * 100}%`,
+              background: '#6366f1',
+              borderRadius: 4,
+              transition: 'width 0.3s',
+            }} />
+          </div>
+          {!isReveal && (
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: timerColor, minWidth: 48, textAlign: 'right' }}>
+              {Math.ceil(data.timeRemainingMs / 1000)}s
+            </span>
+          )}
+        </div>
+
+        {/* Timer bar */}
+        {!isReveal && (
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{
+              height: '100%',
+              width: `${timerFraction * 100}%`,
+              background: timerColor,
+              borderRadius: 4,
+              transition: 'width 0.1s linear, background 0.3s',
+            }} />
+          </div>
+        )}
+
+        {/* Question + answers */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '2rem',
+        }}>
+          <h1 style={{
+            fontSize: 'clamp(1.5rem, 3.5vw, 2.75rem)',
+            fontWeight: 900,
+            textAlign: 'center',
+            lineHeight: 1.3,
+            color: '#f0f0ff',
+            maxWidth: 900,
+          }}>
+            {data.question}
+          </h1>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1rem',
+            width: '100%',
+            maxWidth: 900,
+          }}>
+            {data.options.map((option, i) => {
+              const isCorrect = isReveal && data.correctAnswer === i;
+              const wasChosen = isReveal && Object.values(data.playerAnswers ?? {}).includes(i);
+              const color = ANSWER_COLORS[i]!;
+
+              let bg = '#1a1a2e';
+              let border = `2px solid ${color}44`;
+              let opacity = 1;
+
+              if (isReveal) {
+                if (isCorrect) {
+                  bg = `${color}33`;
+                  border = `2px solid ${color}`;
+                } else if (wasChosen) {
+                  opacity = 0.5;
+                } else {
+                  opacity = 0.3;
+                }
+              }
+
+              return (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '1rem',
+                    padding: '1.25rem 1.5rem',
+                    background: bg,
+                    border,
+                    borderRadius: 12,
+                    opacity,
+                    transition: 'all 0.3s',
+                  }}
+                >
+                  <div style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: color,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 900,
+                    fontSize: '1.25rem',
+                    flexShrink: 0,
+                  }}>
+                    {ANSWER_LABELS[i]}
+                  </div>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 600 }}>{option}</span>
+                  {isCorrect && <span style={{ marginLeft: 'auto', fontSize: '1.5rem' }}>✓</span>}
+                </div>
+              );
+            })}
+          </div>
+
+          {!isReveal && (
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+              {data.answeredPlayerIds.length} / {nonHostPlayers.length} answered
+            </p>
+          )}
+        </div>
+
+        {/* Round score banners during reveal */}
+        {isReveal && state.round.roundScores && Object.keys(state.round.roundScores).length > 0 && (
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
+            {Object.entries(state.round.roundScores).map(([playerId, pts]) => {
+              const player = nonHostPlayers.find((p) => p.id === playerId);
+              if (!player || !pts) return null;
+              return (
+                <div key={playerId} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.5rem 1rem',
+                  background: '#14532d',
+                  border: '1px solid #22c55e',
+                  borderRadius: 8,
+                }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[player.avatarColor] }} />
+                  <span style={{ fontWeight: 700 }}>{player.name}</span>
+                  <span style={{ color: '#22c55e', fontWeight: 900 }}>+{pts}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Leaderboard sidebar ── */}
+      <div style={{
+        background: '#0d0d1f',
+        borderLeft: '1px solid #1f1f35',
+        padding: '1.5rem 1rem',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+      }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          Leaderboard
+        </p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.625rem',
+            padding: '0.625rem 0.75rem',
+            background: i === 0 ? '#1a1036' : '#131326',
+            borderRadius: 8,
+            border: i === 0 ? '1px solid #7c3aed44' : '1px solid transparent',
+          }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {p.name}
+            </span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>
+              {state.scores[p.id] ?? 0}
+            </span>
+          </div>
+        ))}
+        {sorted.length === 0 && (
+          <p style={{ color: '#374151', fontSize: '0.8rem', textAlign: 'center', marginTop: '2rem' }}>No players yet</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Game View ─────────────────────────────────────────────────────────────────
 
 function GameView({
   gameId,
   players,
+  gameState,
   scores,
   onEndGame,
 }: {
   gameId: string;
   players: Player[];
+  gameState: GameState | null;
   scores: Record<string, number> | null;
   onEndGame: () => void;
 }) {
@@ -133,9 +367,12 @@ function GameView({
     );
   }
 
+  if (gameId === 'trivia' && gameState) {
+    return <TriviaHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
-      {/* Player bar */}
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
         {nonHostPlayers.map((p) => (
           <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -144,7 +381,6 @@ function GameView({
           </div>
         ))}
       </div>
-      {/* Game content area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', gap: '1rem' }}>
         <p style={{ fontSize: '5rem' }}>🎮</p>
         <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#a78bfa', textTransform: 'capitalize' }}>{gameId}</h2>
@@ -164,6 +400,7 @@ export default function HostPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [status, setStatus] = useState<HostStatus>('connecting');
   const [gameId, setGameId] = useState('');
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
@@ -220,7 +457,11 @@ export default function HostPage() {
         case 'GAME_STARTED':
           setStatus('playing');
           setGameId(msg.gameId);
+          setGameState(null);
           setScores(null);
+          break;
+        case 'GAME_STATE_UPDATE':
+          setGameState(msg.state);
           break;
         case 'GAME_ENDED':
           setScores(msg.scores);
@@ -253,6 +494,7 @@ export default function HostPage() {
     setStatus('waiting');
     setScores(null);
     setGameId('');
+    setGameState(null);
   }
 
   const nonHostPlayers = players.filter((p) => !p.isHost);
@@ -263,8 +505,6 @@ export default function HostPage() {
       ? `${window.location.origin}/join#${roomCode}`
       : `http://localhost:3000/join#${roomCode}`;
 
-  // ── Connecting ──
-
   if (status === 'connecting') {
     return (
       <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -272,8 +512,6 @@ export default function HostPage() {
       </main>
     );
   }
-
-  // ── Error ──
 
   if (status === 'error') {
     return (
@@ -290,18 +528,14 @@ export default function HostPage() {
     );
   }
 
-  // ── Game (active or ended) ──
-
   if (status === 'playing' || scores !== null) {
     return (
       <>
         <ToastContainer toasts={toasts} />
-        <GameView gameId={gameId} players={players} scores={scores} onEndGame={endGame} />
+        <GameView gameId={gameId} players={players} gameState={gameState} scores={scores} onEndGame={endGame} />
       </>
     );
   }
-
-  // ── Lobby (landscape TV layout) ──
 
   return (
     <>
@@ -314,7 +548,6 @@ export default function HostPage() {
       `}</style>
       <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', height: '100vh' }}>
 
-        {/* ── Left panel: QR + join info ── */}
         <div
           style={{
             background: '#13131f',
@@ -353,10 +586,8 @@ export default function HostPage() {
           </p>
         </div>
 
-        {/* ── Right panel: players + controls ── */}
         <div style={{ display: 'flex', flexDirection: 'column', padding: '2.5rem', gap: '1.5rem', overflow: 'hidden' }}>
 
-          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <div>
               <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>Lobby</h1>
@@ -371,7 +602,6 @@ export default function HostPage() {
             )}
           </div>
 
-          {/* Players grid */}
           <div
             style={{
               flex: 1,
@@ -406,7 +636,6 @@ export default function HostPage() {
             )}
           </div>
 
-          {/* Start button */}
           <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', paddingTop: '0.5rem' }}>
             <button
               onClick={startGame}
