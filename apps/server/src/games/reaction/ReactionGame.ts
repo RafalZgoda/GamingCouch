@@ -63,7 +63,7 @@ export class ReactionGame extends BaseGame {
   constructor(config?: Record<string, unknown>) {
     super();
     const r = config?.rounds;
-    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : ROUNDS;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(1, Math.round(r))) : ROUNDS;
   }
 
   private signal: 'waiting' | 'go' = 'waiting';

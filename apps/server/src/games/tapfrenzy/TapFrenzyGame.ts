@@ -55,7 +55,7 @@ export class TapFrenzyGame extends BaseGame {
   constructor(config?: Record<string, unknown>) {
     super();
     const r = config?.rounds;
-    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : TOTAL_ROUNDS;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(1, Math.round(r))) : TOTAL_ROUNDS;
   }
 
   protected onInit(_players: Player[]): GameState {

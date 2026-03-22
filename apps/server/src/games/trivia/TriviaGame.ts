@@ -152,7 +152,7 @@ export class TriviaGame extends BaseGame {
     this.difficulty = (raw === 'easy' || raw === 'medium' || raw === 'hard') ? raw : 'medium';
     this.questionTimeMs = QUESTION_TIME_MS[this.difficulty];
     const r = config?.rounds;
-    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : QUESTIONS_PER_GAME;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(1, Math.round(r))) : QUESTIONS_PER_GAME;
   }
 
   // ── BaseGame hooks ──────────────────────────────────────────────────────────

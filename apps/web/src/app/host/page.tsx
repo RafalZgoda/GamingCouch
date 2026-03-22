@@ -129,6 +129,44 @@ interface BlindTestData {
   playerAnswers?: Record<string, number>;
 }
 
+// Dodge Master data shape
+interface DodgeMasterData {
+  arena: number;
+  playerRadius: number;
+  obstacleRadius: number;
+  players: Record<string, { x: number; y: number; alive: boolean }>;
+  obstacles: Array<{ x: number; y: number; radius: number }>;
+  timeRemainingMs: number;
+  round: number;
+  totalRounds: number;
+}
+
+// Swipe Duel data shape
+interface SwipeDuelData {
+  roundPhase: 'countdown' | 'go' | 'reveal';
+  targetDirection: 'up' | 'down' | 'left' | 'right';
+  countdownMs: number;
+  responseMs: number;
+  correctPlayers: string[];
+  wrongPlayers: string[];
+  missedPlayers: string[];
+  round: number;
+  totalRounds: number;
+}
+
+// Direction Dash data shape
+interface DirectionDashData {
+  roundPhase: 'showing' | 'input' | 'reveal';
+  sequence: string[];
+  sequenceLength: number;
+  showTimeMs: number;
+  inputTimeMs: number;
+  playerProgress: Record<string, number>;
+  playerResults: Record<string, { correct: number; total: number; failed: boolean }>;
+  round: number;
+  totalRounds: number;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -139,6 +177,9 @@ const GAME_LABELS: Record<string, string> = {
   trueorfalse: '✅ True or False',
   tapfrenzy: '👇 Tap Frenzy',
   blindtest: '🎵 Blind Test',
+  dodgemaster: '🕹️ Dodge Master',
+  swipeduel: '👆 Swipe Duel',
+  directiondash: '🎯 Direction Dash',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -1474,7 +1515,7 @@ export default function HostPage() {
   // Game picker state
   const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
-  const [selectedRounds, setSelectedRounds] = useState(5);
+  const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
   const [sessionScores, setSessionScores] = useState<Record<string, number>>({});
 
@@ -1843,7 +1884,7 @@ export default function HostPage() {
             {/* ── Round picker ── */}
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
               <span style={{ color: '#6b7280', fontSize: '0.8rem', fontWeight: 600 }}>Rounds:</span>
-              {([3, 5, 8, 10] as const).map((n) => (
+              {([1, 3, 5, 10] as const).map((n) => (
                 <button
                   key={n}
                   onClick={() => setSelectedRounds(n)}

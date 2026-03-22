@@ -49,7 +49,7 @@ export default function JoinPage() {
   const [games, setGames] = useState<GameDefinition[]>([]);
   const [startingGame, setStartingGame] = useState<string | null>(null);
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
-  const [selectedRounds, setSelectedRounds] = useState(5);
+  const [selectedRounds, setSelectedRounds] = useState(1);
 
   // Saved join params for reconnect
   const joinParamsRef = useRef<{ code: string; name: string; avatarColor: AvatarColor } | null>(null);
@@ -401,7 +401,7 @@ export default function JoinPage() {
             {/* Round picker */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ color: '#555577', fontSize: '0.78rem', fontWeight: 600 }}>Rounds:</span>
-              {([3, 5, 8, 10] as const).map((n) => (
+              {([1, 3, 5, 10] as const).map((n) => (
                 <button
                   key={n}
                   onClick={() => setSelectedRounds(n)}
