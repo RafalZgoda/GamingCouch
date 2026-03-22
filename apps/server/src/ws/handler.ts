@@ -138,6 +138,7 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
                 });
                 gameEngines.delete(room.id);
               },
+              msg.config,
             );
           } catch (err) {
             const message = err instanceof Error ? err.message : 'Unknown game';

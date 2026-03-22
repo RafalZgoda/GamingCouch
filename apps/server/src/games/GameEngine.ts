@@ -21,8 +21,9 @@ export class GameEngine {
     private readonly onStateUpdate: (state: GameState) => void,
     /** Called once when the game reaches 'results' phase. */
     private readonly onGameEnd: (final: FinalScores) => void,
+    config?: Record<string, unknown>,
   ) {
-    const game = GameRegistry.create(gameId);
+    const game = GameRegistry.create(gameId, config);
     if (!game) throw new Error(`Unknown game id: "${gameId}"`);
     this.game = game;
   }

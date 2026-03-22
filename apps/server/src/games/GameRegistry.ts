@@ -1,7 +1,7 @@
 import type { GameDefinition } from '@gamingcouch/shared';
 import type { Game } from './Game.js';
 
-type GameFactory = () => Game;
+type GameFactory = (config?: Record<string, unknown>) => Game;
 
 /**
  * Singleton registry that maps game IDs to their factory functions.
@@ -23,9 +23,9 @@ class GameRegistryClass {
   }
 
   /** Create a fresh game instance for a room. Returns null if unknown id. */
-  create(gameId: string): Game | null {
+  create(gameId: string, config?: Record<string, unknown>): Game | null {
     const entry = this.entries.get(gameId);
-    return entry ? entry.factory() : null;
+    return entry ? entry.factory(config) : null;
   }
 
   /** List all registered game definitions (for the lobby picker). */

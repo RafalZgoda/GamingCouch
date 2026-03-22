@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import {
   ClientToServerMessage,
   ServerToClientMessage,
@@ -28,6 +28,7 @@ export default function JoinPage() {
   const [avatarColor, setAvatarColor] = useState<AvatarColor>('blue');
 
   const [joined, setJoined] = useState(false);
+  const joinedRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState('');
   const [roomStatus, setRoomStatus] = useState<'waiting' | 'ready' | 'playing' | 'finished'>('waiting');
@@ -36,6 +37,9 @@ export default function JoinPage() {
 
   // Saved join params for reconnect
   const joinParamsRef = useRef<{ code: string; name: string; avatarColor: AvatarColor } | null>(null);
+
+  // Keep joinedRef in sync so closures always read the latest value
+  useEffect(() => { joinedRef.current = joined; }, [joined]);
 
   const connect = useCallback((joinCode: string, joinName: string, color: AvatarColor, isReconnect = false) => {
     if (reconnectTimer.current) {
@@ -65,6 +69,7 @@ export default function JoinPage() {
       const msg = JSON.parse(event.data as string) as ServerToClientMessage;
       switch (msg.type) {
         case 'ROOM_JOINED':
+          joinedRef.current = true;
           setJoined(true);
           setRoomStatus(msg.room.status === 'playing' ? 'playing' : 'waiting');
           break;
@@ -79,6 +84,7 @@ export default function JoinPage() {
           break;
         case 'PLAYER_KICKED':
           setError('You were kicked from the room.');
+          joinedRef.current = false;
           setJoined(false);
           setConnStatus('disconnected');
           ws.close();
@@ -99,7 +105,7 @@ export default function JoinPage() {
 
     ws.onclose = () => {
       wsRef.current = null;
-      if (!joined) {
+      if (!joinedRef.current) {
         setConnStatus('idle');
         return;
       }
@@ -118,7 +124,7 @@ export default function JoinPage() {
         setError('Lost connection to server.');
       }
     };
-  }, [joined]);
+  }, []);
 
   function handleJoin() {
     if (code.length !== 4 || !name.trim()) {

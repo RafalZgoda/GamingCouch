@@ -29,9 +29,21 @@ interface TriviaData {
   questionIndex: number;
   totalQuestions: number;
   timeRemainingMs: number;
+  difficulty: 'easy' | 'medium' | 'hard';
   answeredPlayerIds: string[];
   correctAnswer?: number;
   playerAnswers?: Record<string, number>;
+}
+
+// Reaction game data shape
+interface ReactionData {
+  signal: 'waiting' | 'go';
+  waitRemainingMs: number;
+  goRemainingMs: number;
+  round: number;
+  totalRounds: number;
+  playerTaps: Record<string, number>;
+  earlyTappers: string[];
 }
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -112,6 +124,16 @@ function TriviaHostView({
           <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
             Question {data.questionIndex + 1} / {data.totalQuestions}
           </span>
+          {data.difficulty && (
+            <span style={{
+              fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+              padding: '0.2rem 0.6rem', borderRadius: '9999px',
+              background: data.difficulty === 'easy' ? '#14532d' : data.difficulty === 'hard' ? '#7f1d1d' : '#78350f',
+              color: data.difficulty === 'easy' ? '#22c55e' : data.difficulty === 'hard' ? '#f87171' : '#f59e0b',
+            }}>
+              {data.difficulty}
+            </span>
+          )}
           <div style={{ flex: 1, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
             <div style={{
               height: '100%',
@@ -300,6 +322,131 @@ function TriviaHostView({
   );
 }
 
+// ── Reaction Host View ────────────────────────────────────────────────────────
+
+function ReactionHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as ReactionData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const isReveal = state.phase === 'round_end';
+  const isGo = data.signal === 'go' && !isReveal;
+
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* ── Main area ── */}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '2rem' }}>
+
+        {/* Round counter */}
+        <p style={{ color: '#6b7280', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.875rem' }}>
+          Round {data.round} / {data.totalRounds}
+        </p>
+
+        {/* Signal circle */}
+        <div style={{
+          width: 240,
+          height: 240,
+          borderRadius: '50%',
+          background: isReveal ? '#374151' : isGo ? '#22c55e' : '#ef4444',
+          boxShadow: isReveal ? 'none' : isGo
+            ? '0 0 80px #22c55e88'
+            : '0 0 40px #ef444466',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '4rem',
+          fontWeight: 900,
+          transition: 'background 0.15s, box-shadow 0.15s',
+        }}>
+          {isReveal ? '✓' : isGo ? 'GO!' : '...'}
+        </div>
+
+        {/* Timer bar during go phase */}
+        {isGo && (
+          <div style={{ width: '100%', maxWidth: 400, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${(data.goRemainingMs / 2500) * 100}%`,
+              background: '#22c55e',
+              borderRadius: 4,
+              transition: 'width 0.1s linear',
+            }} />
+          </div>
+        )}
+
+        {/* Tap results during reveal */}
+        {isReveal && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 400 }}>
+            {nonHostPlayers
+              .sort((a, b) => {
+                const ta = data.playerTaps[a.id];
+                const tb = data.playerTaps[b.id];
+                if (ta !== undefined && tb !== undefined) return ta - tb;
+                if (ta !== undefined) return -1;
+                if (tb !== undefined) return 1;
+                return 0;
+              })
+              .map((p) => {
+                const ms = data.playerTaps[p.id];
+                const early = data.earlyTappers.includes(p.id);
+                const pts = state.round.roundScores[p.id];
+                return (
+                  <div key={p.id} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.625rem 1rem',
+                    background: early ? '#2d1515' : ms !== undefined ? '#14532d' : '#1f2937',
+                    borderRadius: 8,
+                    border: `1px solid ${early ? '#7f1d1d' : ms !== undefined ? '#166534' : '#374151'}`,
+                  }}>
+                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontWeight: 700 }}>{p.name}</span>
+                    {early && <span style={{ color: '#f87171', fontSize: '0.875rem' }}>Early! −100</span>}
+                    {ms !== undefined && !early && (
+                      <>
+                        <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>{ms}ms</span>
+                        {pts && <span style={{ color: '#22c55e', fontWeight: 900 }}>+{pts}</span>}
+                      </>
+                    )}
+                    {ms === undefined && !early && <span style={{ color: '#4b5563', fontSize: '0.875rem' }}>No tap</span>}
+                  </div>
+                );
+              })
+            }
+          </div>
+        )}
+      </div>
+
+      {/* ── Leaderboard sidebar ── */}
+      <div style={{
+        background: '#0d0d1f', borderLeft: '1px solid #1f1f35',
+        padding: '1.5rem 1rem', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: '0.75rem',
+      }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          Leaderboard
+        </p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{
+            display: 'flex', alignItems: 'center', gap: '0.625rem',
+            padding: '0.625rem 0.75rem',
+            background: i === 0 ? '#1a1036' : '#131326',
+            borderRadius: 8,
+            border: i === 0 ? '1px solid #7c3aed44' : '1px solid transparent',
+          }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Game View ─────────────────────────────────────────────────────────────────
 
 function GameView({
@@ -371,6 +518,10 @@ function GameView({
     return <TriviaHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'reaction' && gameState) {
+    return <ReactionHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -403,6 +554,9 @@ export default function HostPage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  // Game picker state
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction'>('trivia');
+  const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   const addToast = useCallback((message: string, color: string) => {
     const id = ++toastCounterRef.current;
@@ -483,7 +637,8 @@ export default function HostPage() {
   function startGame() {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'HOST_START_GAME', gameId: 'trivia' } satisfies ClientToServerMessage));
+    const config = selectedGame === 'trivia' ? { difficulty: triviaDifficulty } : undefined;
+    ws.send(JSON.stringify({ type: 'HOST_START_GAME', gameId: selectedGame, config } satisfies ClientToServerMessage));
   }
 
   function endGame() {
@@ -636,28 +791,81 @@ export default function HostPage() {
             )}
           </div>
 
-          <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', paddingTop: '0.5rem' }}>
-            <button
-              onClick={startGame}
-              disabled={!allReady}
-              style={{
-                padding: '1rem 3rem',
-                background: allReady ? 'var(--accent)' : '#1f2937',
-                color: allReady ? '#fff' : '#4b5563',
-                border: `2px solid ${allReady ? 'var(--accent)' : '#374151'}`,
-                borderRadius: '0.75rem',
-                fontWeight: 700,
-                fontSize: '1.25rem',
-                cursor: allReady ? 'pointer' : 'not-allowed',
-                transition: 'background 0.15s, border-color 0.15s',
-              }}
-            >
-              {allReady
-                ? 'Start Game →'
-                : nonHostPlayers.length < MIN_PLAYERS_TO_START
-                  ? `Need ${MIN_PLAYERS_TO_START - nonHostPlayers.length} more player(s) to start`
-                  : 'Waiting for all players to ready up…'}
-            </button>
+          {/* ── Game picker ── */}
+          <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              {(['trivia', 'reaction'] as const).map((g) => (
+                <button
+                  key={g}
+                  onClick={() => setSelectedGame(g)}
+                  style={{
+                    padding: '0.5rem 1.25rem',
+                    borderRadius: '0.5rem',
+                    border: `2px solid ${selectedGame === g ? 'var(--accent)' : '#374151'}`,
+                    background: selectedGame === g ? '#1e1b4b' : '#1f2937',
+                    color: selectedGame === g ? '#a78bfa' : '#6b7280',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {g === 'trivia' ? '🧠 Trivia' : '⚡ Reaction'}
+                </button>
+              ))}
+            </div>
+
+            {selectedGame === 'trivia' && (
+              <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                {(['easy', 'medium', 'hard'] as const).map((d) => {
+                  const colors = { easy: '#22c55e', medium: '#f59e0b', hard: '#ef4444' };
+                  const active = triviaDifficulty === d;
+                  return (
+                    <button
+                      key={d}
+                      onClick={() => setTriviaDifficulty(d)}
+                      style={{
+                        padding: '0.35rem 0.875rem',
+                        borderRadius: '9999px',
+                        border: `2px solid ${active ? colors[d] : '#374151'}`,
+                        background: active ? `${colors[d]}22` : 'transparent',
+                        color: active ? colors[d] : '#6b7280',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        textTransform: 'capitalize',
+                      }}
+                    >
+                      {d}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <button
+                onClick={startGame}
+                disabled={!allReady}
+                style={{
+                  padding: '1rem 3rem',
+                  background: allReady ? 'var(--accent)' : '#1f2937',
+                  color: allReady ? '#fff' : '#4b5563',
+                  border: `2px solid ${allReady ? 'var(--accent)' : '#374151'}`,
+                  borderRadius: '0.75rem',
+                  fontWeight: 700,
+                  fontSize: '1.25rem',
+                  cursor: allReady ? 'pointer' : 'not-allowed',
+                  transition: 'background 0.15s, border-color 0.15s',
+                }}
+              >
+                {allReady
+                  ? 'Start Game →'
+                  : nonHostPlayers.length < MIN_PLAYERS_TO_START
+                    ? `Need ${MIN_PLAYERS_TO_START - nonHostPlayers.length} more player(s) to start`
+                    : 'Waiting for all players to ready up…'}
+              </button>
+            </div>
           </div>
         </div>
 
