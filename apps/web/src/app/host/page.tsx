@@ -11,6 +11,7 @@ import {
   MIN_PLAYERS_TO_START,
 } from '@gamingcouch/shared';
 import { getWsUrl } from '@/lib/wsUrl';
+import { playPlayerJoin, playPlayerLeave, playGameStart, playGameOver, playRoundEnd, playCountdownBeep } from '@/lib/sounds';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1750,7 +1751,17 @@ function GameView({
   scores: Record<string, number> | null;
   onEndGame: () => void;
 }) {
+  const prevPhaseRef = useRef<string | null>(null);
   const nonHostPlayers = players.filter((p) => !p.isHost);
+
+  // Play round-end sound when phase transitions to round_end
+  useEffect(() => {
+    const phase = gameState?.phase ?? null;
+    if (phase === 'round_end' && prevPhaseRef.current === 'active') {
+      playRoundEnd();
+    }
+    prevPhaseRef.current = phase;
+  }, [gameState?.phase]);
 
   if (scores !== null) {
     const sorted = [...nonHostPlayers].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0));
@@ -1933,6 +1944,7 @@ export default function HostPage() {
         case 'PLAYER_JOINED':
           setPlayers((prev) => [...prev, msg.player]);
           addToast(`${msg.player.name} joined!`, '#22c55e');
+          playPlayerJoin();
           break;
         case 'PLAYER_LEFT':
           setPlayers((prev) => {
@@ -1940,6 +1952,7 @@ export default function HostPage() {
             if (leaving && !leaving.isHost) addToast(`${leaving.name} left`, '#f97316');
             return prev.filter((p) => p.id !== msg.playerId);
           });
+          playPlayerLeave();
           break;
         case 'PLAYER_KICKED':
           setPlayers((prev) => {
@@ -1963,12 +1976,14 @@ export default function HostPage() {
           setGameId(msg.gameId);
           setGameState(null);
           setScores(null);
+          playGameStart();
           break;
         case 'GAME_STATE_UPDATE':
           setGameState(msg.state);
           break;
         case 'GAME_ENDED':
           setScores(msg.scores);
+          playGameOver();
           setSessionScores((prev) => {
             const next = { ...prev };
             for (const [id, pts] of Object.entries(msg.scores)) {

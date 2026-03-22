@@ -10,6 +10,7 @@ import type {
   ControlJoystick,
   ControlSwipeArea,
 } from '@gamingcouch/shared';
+import { playClick, playDpadTap, playSwipe } from '@/lib/sounds';
 
 interface Props {
   layout: ControllerLayout;
@@ -52,6 +53,7 @@ function ButtonControl({ control, onInput }: { control: ControlButton; onInput: 
     e.preventDefault();
     (e.target as Element).setPointerCapture(e.pointerId);
     setPressed(true);
+    playClick();
     onInput({ control: control.id, action: 'button_down' });
   }
 
@@ -105,6 +107,7 @@ function DPadControl({ control, onInput }: { control: ControlDPad; onInput: (e: 
       e.preventDefault();
       (e.target as Element).setPointerCapture(e.pointerId);
       setActive(dir);
+      playDpadTap();
       onInput({ control: control.id, action: 'dpad', direction: dir });
     };
   }
@@ -291,6 +294,7 @@ function SwipeControl({ control, onInput }: { control: ControlSwipeArea; onInput
       : dy > 0 ? 'down' : 'up';
 
     onInput({ control: control.id, action: 'swipe', direction });
+    playSwipe();
     const arrows = { up: '↑', down: '↓', left: '←', right: '→' };
     setFlash(arrows[direction]);
     setTimeout(() => setFlash(null), 400);

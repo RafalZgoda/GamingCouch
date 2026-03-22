@@ -15,6 +15,7 @@ import {
 } from '@gamingcouch/shared';
 import ControllerView from './ControllerView';
 import { getWsUrl } from '@/lib/wsUrl';
+import { playReady, playGameStart, playGameOver, playClick, playPlayerJoin, playPlayerLeave } from '@/lib/sounds';
 
 function getApiUrl(): string {
   if (typeof window !== 'undefined') return window.location.origin;
@@ -112,10 +113,14 @@ export default function JoinPage() {
           break;
         }
         case 'PLAYER_JOINED':
-          if (!msg.player.isHost) setPlayers((prev) => [...prev, msg.player]);
+          if (!msg.player.isHost) {
+            setPlayers((prev) => [...prev, msg.player]);
+            playPlayerJoin();
+          }
           break;
         case 'PLAYER_LEFT':
           setPlayers((prev) => prev.filter((p) => p.id !== msg.playerId));
+          playPlayerLeave();
           break;
         case 'PLAYER_READY_CHANGED':
           setPlayers((prev) =>
@@ -136,12 +141,14 @@ export default function JoinPage() {
           setFinalScores(null);
           setFinalWinner(null);
           setStartingGame(null);
+          playGameStart();
           break;
         case 'GAME_ENDED':
           setRoomStatus('finished');
           setFinalScores(msg.scores);
           setFinalWinner(msg.winner);
           setControllerLayout(null);
+          playGameOver();
           break;
         case 'CONTROLLER_LAYOUT':
           setControllerLayout(msg.layout);
@@ -205,12 +212,14 @@ export default function JoinPage() {
     const msg: ClientToServerMessage = { type: 'PLAYER_READY' };
     ws.send(JSON.stringify(msg));
     setIsReady(true);
+    playReady();
   }
 
   function handleStartGame(gameId: string) {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     setStartingGame(gameId);
+    playClick();
     const config: Record<string, unknown> = { rounds: selectedRounds };
     if (gameId === 'trivia') config.difficulty = triviaDifficulty;
     const msg: ClientToServerMessage = { type: 'PLAYER_START_GAME', gameId, config };
