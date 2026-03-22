@@ -653,7 +653,7 @@ export default function HostPage() {
   }
 
   const nonHostPlayers = players.filter((p) => !p.isHost);
-  const allReady = nonHostPlayers.length >= MIN_PLAYERS_TO_START && nonHostPlayers.every((p) => p.isReady);
+  const allReady = nonHostPlayers.length === 0 || (nonHostPlayers.length >= MIN_PLAYERS_TO_START && nonHostPlayers.every((p) => p.isReady));
 
   const joinUrl =
     typeof window !== 'undefined'

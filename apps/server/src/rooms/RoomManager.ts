@@ -36,7 +36,7 @@ export class RoomManager {
       status: 'waiting',
       players: [hostPlayer],
       currentGame: null,
-      maxPlayers: Math.min(Math.max(2, maxPlayers), MAX_PLAYERS_PER_ROOM),
+      maxPlayers: Math.min(Math.max(1, maxPlayers), MAX_PLAYERS_PER_ROOM),
       createdAt: Date.now(),
     };
     this.rooms.set(id, room);
