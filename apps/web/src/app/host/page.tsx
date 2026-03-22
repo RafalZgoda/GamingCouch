@@ -1358,6 +1358,383 @@ function BlindTestHostView({ state, players }: { state: GameState; players: Play
   );
 }
 
+// ── Dodge Master Host View ────────────────────────────────────────────────────
+
+function DodgeMasterHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as DodgeMasterData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const isReveal = state.phase === 'round_end';
+  const arenaScale = 4.5; // pixels per arena unit
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '2rem' }}>
+        <p style={{ color: '#6b7280', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.875rem' }}>
+          Round {data.round} / {data.totalRounds}
+        </p>
+
+        {/* Timer */}
+        <div style={{ width: '100%', maxWidth: 450, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${(data.timeRemainingMs / 12000) * 100}%`,
+            background: data.timeRemainingMs < 3000 ? '#ef4444' : '#22c55e',
+            borderRadius: 4,
+            transition: 'width 0.1s linear',
+          }} />
+        </div>
+
+        {/* Arena */}
+        <div style={{
+          position: 'relative',
+          width: data.arena * arenaScale,
+          height: data.arena * arenaScale,
+          background: '#111827',
+          border: '2px solid #374151',
+          borderRadius: 12,
+          overflow: 'hidden',
+        }}>
+          {/* Obstacles */}
+          {data.obstacles.map((obs, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              left: obs.x * arenaScale - obs.radius * arenaScale,
+              top: obs.y * arenaScale - obs.radius * arenaScale,
+              width: obs.radius * 2 * arenaScale,
+              height: obs.radius * 2 * arenaScale,
+              borderRadius: '50%',
+              background: '#ef4444',
+              boxShadow: '0 0 12px #ef444466',
+            }} />
+          ))}
+
+          {/* Players */}
+          {nonHostPlayers.map((p) => {
+            const ps = data.players[p.id];
+            if (!ps) return null;
+            return (
+              <div key={p.id} style={{
+                position: 'absolute',
+                left: ps.x * arenaScale - data.playerRadius * arenaScale,
+                top: ps.y * arenaScale - data.playerRadius * arenaScale,
+                width: data.playerRadius * 2 * arenaScale,
+                height: data.playerRadius * 2 * arenaScale,
+                borderRadius: '50%',
+                background: ps.alive ? AVATAR_COLOR_HEX[p.avatarColor] : '#4b556366',
+                border: ps.alive ? '2px solid #fff' : '2px solid #4b5563',
+                boxShadow: ps.alive ? `0 0 10px ${AVATAR_COLOR_HEX[p.avatarColor]}88` : 'none',
+                opacity: ps.alive ? 1 : 0.4,
+                transition: 'opacity 0.3s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.6rem', fontWeight: 800, color: '#fff',
+              }}>
+                {p.name.charAt(0).toUpperCase()}
+              </div>
+            );
+          })}
+        </div>
+
+        {isReveal && (
+          <p style={{ color: '#a78bfa', fontWeight: 700, fontSize: '1.25rem' }}>Round over!</p>
+        )}
+      </div>
+
+      {/* Leaderboard */}
+      <div style={{
+        background: '#0d0d1f', borderLeft: '1px solid #1f1f35',
+        padding: '1.5rem 1rem', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: '0.75rem',
+      }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          Leaderboard
+        </p>
+        {sorted.map((p, i) => {
+          const ps = data.players[p.id];
+          return (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.625rem',
+              padding: '0.625rem 0.75rem',
+              background: i === 0 ? '#1a1036' : '#131326',
+              borderRadius: 8,
+              border: i === 0 ? '1px solid #7c3aed44' : '1px solid transparent',
+              opacity: ps?.alive === false ? 0.5 : 1,
+            }}>
+              <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>
+                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+              </span>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+              <span style={{ fontSize: '0.75rem', color: ps?.alive ? '#22c55e' : '#ef4444' }}>
+                {ps?.alive ? 'ALIVE' : 'OUT'}
+              </span>
+              <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Swipe Duel Host View ──────────────────────────────────────────────────────
+
+const DIRECTION_ARROWS: Record<string, string> = { up: '↑', down: '↓', left: '←', right: '→' };
+const DIRECTION_COLORS: Record<string, string> = { up: '#3b82f6', down: '#ef4444', left: '#f59e0b', right: '#22c55e' };
+
+function SwipeDuelHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as SwipeDuelData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const isReveal = data.roundPhase === 'reveal';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '2rem' }}>
+        <p style={{ color: '#6b7280', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.875rem' }}>
+          Round {data.round} / {data.totalRounds}
+        </p>
+
+        {data.roundPhase === 'countdown' && (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '2rem', color: '#9ca3af', fontWeight: 700 }}>Get ready...</p>
+            <p style={{ fontSize: '4rem', fontWeight: 900, color: '#f59e0b' }}>{Math.ceil(data.countdownMs / 1000)}</p>
+          </div>
+        )}
+
+        {data.roundPhase === 'go' && (
+          <>
+            <div style={{
+              width: 200, height: 200, borderRadius: 24,
+              background: DIRECTION_COLORS[data.targetDirection],
+              boxShadow: `0 0 80px ${DIRECTION_COLORS[data.targetDirection]}88`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '8rem', fontWeight: 900,
+            }}>
+              {DIRECTION_ARROWS[data.targetDirection]}
+            </div>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, textTransform: 'uppercase' }}>
+              Swipe {data.targetDirection}!
+            </p>
+            <div style={{ width: '100%', maxWidth: 400, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${(data.responseMs / 3000) * 100}%`,
+                background: DIRECTION_COLORS[data.targetDirection],
+                borderRadius: 4,
+                transition: 'width 0.1s linear',
+              }} />
+            </div>
+          </>
+        )}
+
+        {isReveal && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 400 }}>
+            {nonHostPlayers.map((p) => {
+              const correct = data.correctPlayers.includes(p.id);
+              const wrong = data.wrongPlayers.includes(p.id);
+              const pts = state.round.roundScores[p.id];
+              return (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.625rem 1rem',
+                  background: correct ? '#14532d' : wrong ? '#2d1515' : '#1f2937',
+                  borderRadius: 8,
+                  border: `1px solid ${correct ? '#166534' : wrong ? '#7f1d1d' : '#374151'}`,
+                }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontWeight: 700 }}>{p.name}</span>
+                  {correct && pts && <span style={{ color: '#22c55e', fontWeight: 900 }}>+{pts}</span>}
+                  {wrong && <span style={{ color: '#f87171', fontSize: '0.875rem' }}>Wrong! {pts}</span>}
+                  {!correct && !wrong && <span style={{ color: '#4b5563', fontSize: '0.875rem' }}>No swipe</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Leaderboard */}
+      <div style={{
+        background: '#0d0d1f', borderLeft: '1px solid #1f1f35',
+        padding: '1.5rem 1rem', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: '0.75rem',
+      }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          Leaderboard
+        </p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{
+            display: 'flex', alignItems: 'center', gap: '0.625rem',
+            padding: '0.625rem 0.75rem',
+            background: i === 0 ? '#1a1036' : '#131326',
+            borderRadius: 8,
+            border: i === 0 ? '1px solid #7c3aed44' : '1px solid transparent',
+          }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Direction Dash Host View ──────────────────────────────────────────────────
+
+const DIR_ARROWS: Record<string, string> = { up: '▲', down: '▼', left: '◀', right: '▶' };
+const DIR_COLORS: Record<string, string> = { up: '#3b82f6', down: '#ef4444', left: '#f59e0b', right: '#22c55e' };
+
+function DirectionDashHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as DirectionDashData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '2rem' }}>
+        <p style={{ color: '#6b7280', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.875rem' }}>
+          Round {data.round} / {data.totalRounds}
+        </p>
+
+        {data.roundPhase === 'showing' && (
+          <>
+            <p style={{ fontSize: '1.5rem', color: '#9ca3af', fontWeight: 700 }}>Memorize the sequence!</p>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {data.sequence.map((dir, i) => (
+                <div key={i} style={{
+                  width: 64, height: 64, borderRadius: 12,
+                  background: DIR_COLORS[dir],
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '2rem', fontWeight: 900, color: '#fff',
+                  boxShadow: `0 0 20px ${DIR_COLORS[dir]}66`,
+                }}>
+                  {DIR_ARROWS[dir]}
+                </div>
+              ))}
+            </div>
+            <div style={{ width: '100%', maxWidth: 400, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${(data.showTimeMs / (3000 + (data.sequenceLength - 3) * 500)) * 100}%`,
+                background: '#a78bfa',
+                borderRadius: 4,
+                transition: 'width 0.1s linear',
+              }} />
+            </div>
+          </>
+        )}
+
+        {data.roundPhase === 'input' && (
+          <>
+            <p style={{ fontSize: '1.5rem', color: '#22c55e', fontWeight: 700 }}>Now repeat it!</p>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {Array.from({ length: data.sequenceLength }).map((_, i) => (
+                <div key={i} style={{
+                  width: 48, height: 48, borderRadius: 8,
+                  background: '#1f2937',
+                  border: '2px solid #374151',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.5rem', color: '#6b7280',
+                }}>
+                  {i + 1}
+                </div>
+              ))}
+            </div>
+
+            {/* Player progress */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 400 }}>
+              {nonHostPlayers.map((p) => {
+                const progress = data.playerProgress[p.id] ?? 0;
+                return (
+                  <div key={p.id} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.5rem 1rem', background: '#131326', borderRadius: 8,
+                  }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontWeight: 700, fontSize: '0.875rem' }}>{p.name}</span>
+                    <div style={{ width: 80, height: 6, background: '#1f2937', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${(progress / data.sequenceLength) * 100}%`, background: '#22c55e', borderRadius: 3 }} />
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{progress}/{data.sequenceLength}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ width: '100%', maxWidth: 400, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${(data.inputTimeMs / (5000 + (data.sequenceLength - 3) * 500)) * 100}%`,
+                background: '#22c55e',
+                borderRadius: 4,
+                transition: 'width 0.1s linear',
+              }} />
+            </div>
+          </>
+        )}
+
+        {data.roundPhase === 'reveal' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 400 }}>
+            {nonHostPlayers.map((p) => {
+              const result = data.playerResults[p.id];
+              const pts = state.round.roundScores[p.id];
+              return (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.625rem 1rem',
+                  background: result?.failed ? '#2d1515' : result && result.correct === result.total ? '#14532d' : '#1f2937',
+                  borderRadius: 8,
+                  border: `1px solid ${result?.failed ? '#7f1d1d' : result && result.correct === result.total ? '#166534' : '#374151'}`,
+                }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontWeight: 700 }}>{p.name}</span>
+                  {result?.failed && <span style={{ color: '#f87171', fontSize: '0.875rem' }}>Wrong!</span>}
+                  {result && !result.failed && (
+                    <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>{result.correct}/{result.total}</span>
+                  )}
+                  {pts !== undefined && pts > 0 && <span style={{ color: '#22c55e', fontWeight: 900 }}>+{pts}</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Leaderboard */}
+      <div style={{
+        background: '#0d0d1f', borderLeft: '1px solid #1f1f35',
+        padding: '1.5rem 1rem', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: '0.75rem',
+      }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          Leaderboard
+        </p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{
+            display: 'flex', alignItems: 'center', gap: '0.625rem',
+            padding: '0.625rem 0.75rem',
+            background: i === 0 ? '#1a1036' : '#131326',
+            borderRadius: 8,
+            border: i === 0 ? '1px solid #7c3aed44' : '1px solid transparent',
+          }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+            </span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Game View ─────────────────────────────────────────────────────────────────
 
 function GameView({
@@ -1478,6 +1855,18 @@ function GameView({
 
   if (gameId === 'blindtest' && gameState) {
     return <BlindTestHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'dodgemaster' && gameState) {
+    return <DodgeMasterHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'swipeduel' && gameState) {
+    return <SwipeDuelHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'directiondash' && gameState) {
+    return <DirectionDashHostView state={gameState} players={players} />;
   }
 
   return (

@@ -14,3 +14,6 @@ import '../hotpotato/HotPotatoGame.js';
 import '../trueorfalse/TrueFalseGame.js';
 import '../tapfrenzy/TapFrenzyGame.js';
 import '../blindtest/BlindTestGame.js';
+import '../dodgemaster/DodgeMasterGame.js';
+import '../swipeduel/SwipeDuelGame.js';
+import '../directiondash/DirectionDashGame.js';
