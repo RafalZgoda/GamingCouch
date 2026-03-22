@@ -277,9 +277,19 @@ export default function JoinPage() {
             ))}
           </div>
         )}
-        <p style={{ color: '#8888aa', fontSize: '0.875rem', animation: 'pulse 2s ease-in-out infinite' }}>
-          Waiting for next game…
-        </p>
+        <button
+          onClick={() => {
+            const ws = wsRef.current;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+            ws.send(JSON.stringify({ type: 'PLAYER_BACK_TO_LOBBY' } satisfies ClientToServerMessage));
+          }}
+          style={{
+            ...primaryBtn,
+            padding: '0.7rem 1.75rem', fontSize: '0.95rem',
+          }}
+        >
+          ← Back to Lobby
+        </button>
       </main>
     );
   }

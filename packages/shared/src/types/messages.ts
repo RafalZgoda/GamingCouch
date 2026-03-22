@@ -13,7 +13,8 @@ export type ClientToServerMessage =
   | { type: 'HOST_KICK_PLAYER'; playerId: string }
   | { type: 'HOST_SET_CONTROLLER_LAYOUT'; layout: ControllerLayout }
   | { type: 'PLAYER_INPUT'; payload: ControllerInputEvent }
-  | { type: 'HOST_END_GAME' };
+  | { type: 'HOST_END_GAME' }
+  | { type: 'PLAYER_BACK_TO_LOBBY' };
 
 /**
  * Messages sent from the server to clients.

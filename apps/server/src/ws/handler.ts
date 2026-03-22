@@ -284,6 +284,19 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
           broadcast(allSocketIds, { type: 'ROOM_STATUS_CHANGED', status: 'waiting' });
           break;
         }
+
+        case 'PLAYER_BACK_TO_LOBBY': {
+          const room = roomManager.getRoomBySocketId(socketId);
+          if (!room || room.status !== 'finished') return;
+          const allSocketIds = room.players.map((p) => p.socketId);
+          room.status = 'waiting';
+          room.currentGame = null;
+          for (const p of room.players) {
+            if (!p.isHost) p.isReady = false;
+          }
+          broadcast(allSocketIds, { type: 'ROOM_STATUS_CHANGED', status: 'waiting' });
+          break;
+        }
       }
     });
 
