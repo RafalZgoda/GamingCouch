@@ -153,16 +153,18 @@ function ToastContainer({ toasts }: { toasts: Toast[] }) {
         <div
           key={t.id}
           style={{
-            padding: '0.6rem 1rem',
-            borderRadius: 8,
-            background: '#1f1f35',
-            borderLeft: `4px solid ${t.color}`,
-            color: '#f0f0ff',
-            fontSize: '0.95rem',
+            padding: '0.7rem 1.25rem',
+            borderRadius: 12,
+            background: 'rgba(15,15,30,0.85)',
+            backdropFilter: 'blur(16px)',
+            borderLeft: `3px solid ${t.color}`,
+            border: `1px solid rgba(255,255,255,0.06)`,
+            color: '#eeeef8',
+            fontSize: '0.9rem',
             fontWeight: 600,
             minWidth: 220,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-            animation: 'slideIn 0.2s ease-out',
+            boxShadow: `0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03)`,
+            animation: 'slideIn 0.25s ease-out',
           }}
         >
           {t.message}
@@ -1091,8 +1093,17 @@ function GameView({
   if (scores !== null) {
     const sorted = [...nonHostPlayers].sort((a, b) => (scores[b.id] ?? 0) - (scores[a.id] ?? 0));
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '2rem', background: 'var(--bg)', padding: '2rem' }}>
-        <h1 style={{ fontSize: '3.5rem', fontWeight: 900 }}>Game Over!</h1>
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', gap: '2rem', padding: '2rem',
+        background: 'radial-gradient(ellipse at 50% 30%, rgba(124,58,237,0.12) 0%, transparent 60%), #0a0a12',
+      }}>
+        <div style={{ fontSize: '4rem', animation: 'float 3s ease-in-out infinite' }}>🏆</div>
+        <h1 style={{
+          fontSize: '3.5rem', fontWeight: 900,
+          background: 'linear-gradient(135deg, #fff 0%, #fbbf24 50%, #a78bfa 100%)',
+          WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+        }}>Game Over!</h1>
         <div style={{ width: '100%', maxWidth: 640 }}>
           {sorted.map((p, i) => (
             <div
@@ -1102,10 +1113,12 @@ function GameView({
                 alignItems: 'center',
                 gap: '1rem',
                 padding: '1rem 1.5rem',
-                background: i === 0 ? '#2d1f5e' : '#1f1f35',
-                borderRadius: 10,
+                background: i === 0 ? 'rgba(124,58,237,0.12)' : 'rgba(20,20,40,0.6)',
+                borderRadius: 12,
                 marginBottom: 8,
-                border: i === 0 ? '1px solid #7c3aed' : '1px solid transparent',
+                border: i === 0 ? '1px solid rgba(124,58,237,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                backdropFilter: 'blur(8px)',
+                animation: `slideUp 0.4s ease-out ${i * 0.08}s both`,
               }}
             >
               <span style={{ fontSize: '1.75rem', width: 48, textAlign: 'center' }}>
@@ -1117,6 +1130,7 @@ function GameView({
                   background: AVATAR_COLOR_HEX[p.avatarColor],
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontWeight: 800, fontSize: '1rem', color: '#fff', flexShrink: 0,
+                  boxShadow: `0 0 12px ${AVATAR_COLOR_HEX[p.avatarColor]}44`,
                 }}
               >
                 {p.name[0]?.toUpperCase()}
@@ -1130,7 +1144,14 @@ function GameView({
         </div>
         <button
           onClick={onEndGame}
-          style={{ padding: '0.875rem 2.5rem', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '0.75rem', fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer' }}
+          style={{
+            padding: '0.875rem 2.5rem',
+            background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+            color: '#fff', border: 'none', borderRadius: '0.875rem',
+            fontWeight: 700, fontSize: '1.1rem', cursor: 'pointer',
+            boxShadow: '0 4px 24px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.1)',
+            transition: 'transform 0.15s',
+          }}
         >
           Back to Lobby
         </button>
@@ -1527,13 +1548,15 @@ export default function HostPage() {
                   onClick={() => setSelectedGame(g)}
                   style={{
                     padding: '0.5rem 1.25rem',
-                    borderRadius: '0.5rem',
-                    border: `2px solid ${selectedGame === g ? 'var(--accent)' : '#374151'}`,
-                    background: selectedGame === g ? '#1e1b4b' : '#1f2937',
-                    color: selectedGame === g ? '#a78bfa' : '#6b7280',
+                    borderRadius: '0.625rem',
+                    border: `2px solid ${selectedGame === g ? 'rgba(124,58,237,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                    background: selectedGame === g ? 'rgba(124,58,237,0.15)' : 'rgba(20,20,40,0.6)',
+                    color: selectedGame === g ? '#a78bfa' : '#8888aa',
                     fontWeight: 700,
                     fontSize: '0.9rem',
                     cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    boxShadow: selectedGame === g ? '0 0 16px rgba(124,58,237,0.2)' : 'none',
                   }}
                 >
                   {GAME_LABELS[g]}
@@ -1598,14 +1621,21 @@ export default function HostPage() {
                 disabled={!allReady}
                 style={{
                   padding: '1rem 3rem',
-                  background: allReady ? 'var(--accent)' : '#1f2937',
-                  color: allReady ? '#fff' : '#4b5563',
-                  border: `2px solid ${allReady ? 'var(--accent)' : '#374151'}`,
-                  borderRadius: '0.75rem',
+                  background: allReady
+                    ? 'linear-gradient(135deg, #7c3aed, #6d28d9)'
+                    : 'rgba(20,20,40,0.6)',
+                  color: allReady ? '#fff' : '#555577',
+                  border: allReady
+                    ? '2px solid rgba(124,58,237,0.5)'
+                    : '2px solid rgba(255,255,255,0.06)',
+                  borderRadius: '0.875rem',
                   fontWeight: 700,
                   fontSize: '1.25rem',
                   cursor: allReady ? 'pointer' : 'not-allowed',
-                  transition: 'background 0.15s, border-color 0.15s',
+                  transition: 'all 0.2s',
+                  boxShadow: allReady
+                    ? '0 4px 24px rgba(124,58,237,0.35), inset 0 1px 0 rgba(255,255,255,0.1)'
+                    : 'none',
                 }}
               >
                 {allReady
@@ -1633,9 +1663,12 @@ function PlayerCard({ player, onKick }: { player: Player; onKick: (id: string) =
         alignItems: 'center',
         gap: '0.75rem',
         padding: '0.875rem 1rem',
-        background: '#1a1a2e',
-        borderRadius: '0.75rem',
-        border: `1px solid ${player.isReady ? '#166534' : '#2d2d4e'}`,
+        background: player.isReady ? 'rgba(34,197,94,0.06)' : 'rgba(20,20,40,0.6)',
+        borderRadius: '0.875rem',
+        border: `1px solid ${player.isReady ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)'}`,
+        backdropFilter: 'blur(8px)',
+        animation: 'fadeInScale 0.3s ease-out both',
+        transition: 'border-color 0.2s, background 0.2s',
       }}
     >
       <div
@@ -1651,6 +1684,7 @@ function PlayerCard({ player, onKick }: { player: Player; onKick: (id: string) =
           fontSize: '1rem',
           color: '#fff',
           flexShrink: 0,
+          boxShadow: `0 0 12px ${AVATAR_COLOR_HEX[player.avatarColor]}44`,
         }}
       >
         {player.name[0]?.toUpperCase()}
@@ -1667,13 +1701,14 @@ function PlayerCard({ player, onKick }: { player: Player; onKick: (id: string) =
         onClick={() => onKick(player.id)}
         style={{
           background: 'transparent',
-          border: '1px solid #374151',
-          color: '#6b7280',
+          border: '1px solid rgba(255,255,255,0.08)',
+          color: '#555577',
           borderRadius: '0.375rem',
           padding: '0.2rem 0.5rem',
           cursor: 'pointer',
           fontSize: '0.7rem',
           flexShrink: 0,
+          transition: 'color 0.15s, border-color 0.15s',
         }}
       >
         Kick
