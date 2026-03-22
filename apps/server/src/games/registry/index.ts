@@ -7,3 +7,5 @@
 // Games are registered by their own modules via side-effect imports.
 import '../trivia/TriviaGame.js';
 import '../reaction/ReactionGame.js';
+import '../colormatch/ColorMatchGame.js';
+import '../mathrace/MathRaceGame.js';

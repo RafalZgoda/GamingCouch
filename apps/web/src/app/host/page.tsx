@@ -46,6 +46,38 @@ interface ReactionData {
   earlyTappers: string[];
 }
 
+// Color Match data shape
+interface ColorMatchData {
+  color: string;
+  colorHex: string;
+  round: number;
+  totalRounds: number;
+  timeRemainingMs: number;
+  playerTimes?: Record<string, number>;
+  wrongTappers?: string[];
+  missedPlayers?: string[];
+}
+
+// Math Race data shape
+interface MathRaceData {
+  equation: string;
+  options: string[];
+  difficulty: 'easy' | 'medium' | 'hard';
+  questionIndex: number;
+  totalQuestions: number;
+  timeRemainingMs: number;
+  answeredPlayerIds: string[];
+  correctAnswer?: number;
+  playerAnswers?: Record<string, number>;
+}
+
+const GAME_LABELS: Record<string, string> = {
+  trivia: '🧠 Trivia',
+  reaction: '⚡ Reaction',
+  colormatch: '🎨 Color Match',
+  mathrace: '🔢 Math Race',
+};
+
 // ── QR Code ───────────────────────────────────────────────────────────────────
 
 function QRCodeCanvas({ text, size = 180 }: { text: string; size?: number }) {
@@ -447,6 +479,194 @@ function ReactionHostView({ state, players }: { state: GameState; players: Playe
   );
 }
 
+// ── Color Match Host View ─────────────────────────────────────────────────────
+
+function ColorMatchHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as ColorMatchData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const isReveal = state.phase === 'round_end';
+  const timerFraction = data.timeRemainingMs / 2500;
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '2rem' }}>
+        <p style={{ color: '#6b7280', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.875rem' }}>
+          Round {data.round} / {data.totalRounds}
+        </p>
+
+        {/* Color circle */}
+        <div style={{
+          width: 280, height: 280, borderRadius: '50%',
+          background: isReveal ? '#374151' : data.colorHex,
+          boxShadow: isReveal ? 'none' : `0 0 80px ${data.colorHex}88`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '2rem', fontWeight: 900,
+          transition: 'background 0.2s, box-shadow 0.2s',
+        }}>
+          {isReveal ? '✓' : data.color.toUpperCase()}
+        </div>
+
+        {/* Timer bar */}
+        {!isReveal && (
+          <div style={{ width: '100%', maxWidth: 400, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', width: `${timerFraction * 100}%`,
+              background: data.colorHex, borderRadius: 4,
+              transition: 'width 0.1s linear',
+            }} />
+          </div>
+        )}
+
+        {/* Results */}
+        {isReveal && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', width: '100%', maxWidth: 400 }}>
+            {nonHostPlayers
+              .sort((a, b) => {
+                const ta = data.playerTimes?.[a.id];
+                const tb = data.playerTimes?.[b.id];
+                if (ta !== undefined && tb !== undefined) return ta - tb;
+                if (ta !== undefined) return -1;
+                if (tb !== undefined) return 1;
+                return 0;
+              })
+              .map((p) => {
+                const ms = data.playerTimes?.[p.id];
+                const wrong = data.wrongTappers?.includes(p.id);
+                const missed = data.missedPlayers?.includes(p.id);
+                const pts = state.round.roundScores[p.id];
+                return (
+                  <div key={p.id} style={{
+                    display: 'flex', alignItems: 'center', gap: '0.75rem',
+                    padding: '0.5rem 1rem',
+                    background: wrong ? '#2d1515' : missed ? '#1f2937' : '#14532d',
+                    borderRadius: 8,
+                    border: `1px solid ${wrong ? '#7f1d1d' : missed ? '#374151' : '#166534'}`,
+                  }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontWeight: 700 }}>{p.name}</span>
+                    {wrong && <span style={{ color: '#f87171', fontSize: '0.875rem' }}>Wrong! −{100}</span>}
+                    {missed && <span style={{ color: '#4b5563', fontSize: '0.875rem' }}>No tap</span>}
+                    {ms !== undefined && !wrong && (
+                      <>
+                        <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>{ms}ms</span>
+                        {pts && <span style={{ color: '#22c55e', fontWeight: 900 }}>+{pts}</span>}
+                      </>
+                    )}
+                  </div>
+                );
+              })
+            }
+          </div>
+        )}
+      </div>
+
+      {/* Leaderboard */}
+      <div style={{ background: '#0d0d1f', borderLeft: '1px solid #1f1f35', padding: '1.5rem 1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Leaderboard</p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.75rem', background: i === 0 ? '#1a1036' : '#131326', borderRadius: 8, border: i === 0 ? '1px solid #7c3aed44' : '1px solid transparent' }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}</span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Math Race Host View ───────────────────────────────────────────────────────
+
+const MR_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+const MR_LABELS = ['A', 'B', 'C', 'D'];
+
+function MathRaceHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as MathRaceData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const isReveal = state.phase === 'round_end';
+  const timerFraction = data.timeRemainingMs / 10_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+            Question {data.questionIndex + 1} / {data.totalQuestions}
+          </span>
+          <span style={{
+            fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase',
+            padding: '0.2rem 0.6rem', borderRadius: '9999px',
+            background: data.difficulty === 'hard' ? '#7f1d1d' : data.difficulty === 'medium' ? '#78350f' : '#14532d',
+            color: data.difficulty === 'hard' ? '#f87171' : data.difficulty === 'medium' ? '#f59e0b' : '#22c55e',
+          }}>
+            {data.difficulty}
+          </span>
+          <div style={{ flex: 1 }} />
+          {!isReveal && <span style={{ fontSize: '1.5rem', fontWeight: 900, color: timerColor }}>{Math.ceil(data.timeRemainingMs / 1000)}s</span>}
+        </div>
+
+        {!isReveal && (
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear, background 0.3s' }} />
+          </div>
+        )}
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 900, textAlign: 'center', color: '#f0f0ff' }}>
+            {data.equation}
+          </h1>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 700 }}>
+            {data.options.map((opt, i) => {
+              const isCorrect = isReveal && data.correctAnswer === i;
+              const wasChosen = isReveal && Object.values(data.playerAnswers ?? {}).includes(i);
+              const color = MR_COLORS[i]!;
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '1.25rem 1.5rem',
+                  background: isReveal ? (isCorrect ? `${color}33` : '#1a1a2e') : '#1a1a2e',
+                  border: `2px solid ${isReveal ? (isCorrect ? color : (wasChosen ? color + '44' : color + '22')) : color + '44'}`,
+                  borderRadius: 12,
+                  opacity: isReveal && !isCorrect && !wasChosen ? 0.4 : 1,
+                  transition: 'all 0.3s',
+                }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.25rem', flexShrink: 0 }}>
+                    {MR_LABELS[i]}
+                  </div>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 700 }}>{opt}</span>
+                  {isCorrect && <span style={{ marginLeft: 'auto', fontSize: '1.5rem' }}>✓</span>}
+                </div>
+              );
+            })}
+          </div>
+          {!isReveal && (
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+              {data.answeredPlayerIds.length} / {nonHostPlayers.length} answered
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Leaderboard */}
+      <div style={{ background: '#0d0d1f', borderLeft: '1px solid #1f1f35', padding: '1.5rem 1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Leaderboard</p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.75rem', background: i === 0 ? '#1a1036' : '#131326', borderRadius: 8, border: i === 0 ? '1px solid #7c3aed44' : '1px solid transparent' }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}</span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Game View ─────────────────────────────────────────────────────────────────
 
 function GameView({
@@ -522,6 +742,14 @@ function GameView({
     return <ReactionHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'colormatch' && gameState) {
+    return <ColorMatchHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'mathrace' && gameState) {
+    return <MathRaceHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -555,7 +783,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   const addToast = useCallback((message: string, color: string) => {
@@ -638,6 +866,7 @@ export default function HostPage() {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     const config = selectedGame === 'trivia' ? { difficulty: triviaDifficulty } : undefined;
+
     ws.send(JSON.stringify({ type: 'HOST_START_GAME', gameId: selectedGame, config } satisfies ClientToServerMessage));
   }
 
@@ -794,7 +1023,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
@@ -807,10 +1036,9 @@ export default function HostPage() {
                     fontWeight: 700,
                     fontSize: '0.9rem',
                     cursor: 'pointer',
-                    textTransform: 'capitalize',
                   }}
                 >
-                  {g === 'trivia' ? '🧠 Trivia' : '⚡ Reaction'}
+                  {GAME_LABELS[g]}
                 </button>
               ))}
             </div>
