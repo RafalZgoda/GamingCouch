@@ -9,6 +9,7 @@ import {
   AVATAR_COLOR_HEX,
   ControllerLayout,
   ControllerInputEvent,
+  Player,
 } from '@gamingcouch/shared';
 import ControllerView from './ControllerView';
 import { getWsUrl } from '@/lib/wsUrl';
@@ -34,12 +35,22 @@ export default function JoinPage() {
   const [roomStatus, setRoomStatus] = useState<'waiting' | 'ready' | 'playing' | 'finished'>('waiting');
   const [connStatus, setConnStatus] = useState<ConnStatus>('idle');
   const [controllerLayout, setControllerLayout] = useState<ControllerLayout | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [ownPlayerId, setOwnPlayerId] = useState<string | null>(null);
+  const [finalScores, setFinalScores] = useState<Record<string, number> | null>(null);
+  const [finalWinner, setFinalWinner] = useState<string | null>(null);
 
   // Saved join params for reconnect
   const joinParamsRef = useRef<{ code: string; name: string; avatarColor: AvatarColor } | null>(null);
 
   // Keep joinedRef in sync so closures always read the latest value
   useEffect(() => { joinedRef.current = joined; }, [joined]);
+
+  // Pre-fill room code from URL hash (e.g. /join#1234 from QR code scan)
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (/^\d{4}$/.test(hash)) setCode(hash);
+  }, []);
 
   const connect = useCallback((joinCode: string, joinName: string, color: AvatarColor, isReconnect = false) => {
     if (reconnectTimer.current) {
@@ -68,16 +79,46 @@ export default function JoinPage() {
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data as string) as ServerToClientMessage;
       switch (msg.type) {
-        case 'ROOM_JOINED':
+        case 'ROOM_JOINED': {
           joinedRef.current = true;
           setJoined(true);
-          setRoomStatus(msg.room.status === 'playing' ? 'playing' : 'waiting');
+          const nonHostPlayers = msg.room.players.filter((p) => !p.isHost);
+          setPlayers(nonHostPlayers);
+          const self = nonHostPlayers.find((p) => p.name === name.trim());
+          if (self) setOwnPlayerId(self.id);
+          setRoomStatus(msg.room.status);
+          break;
+        }
+        case 'PLAYER_JOINED':
+          if (!msg.player.isHost) setPlayers((prev) => [...prev, msg.player]);
+          break;
+        case 'PLAYER_LEFT':
+          setPlayers((prev) => prev.filter((p) => p.id !== msg.playerId));
+          break;
+        case 'PLAYER_READY_CHANGED':
+          setPlayers((prev) =>
+            prev.map((p) => (p.id === msg.playerId ? { ...p, isReady: msg.isReady } : p)),
+          );
           break;
         case 'ROOM_STATUS_CHANGED':
           setRoomStatus(msg.status);
+          if (msg.status === 'waiting') {
+            setFinalScores(null);
+            setFinalWinner(null);
+            setIsReady(false);
+            setPlayers((prev) => prev.map((p) => ({ ...p, isReady: false })));
+          }
           break;
         case 'GAME_STARTED':
           setRoomStatus('playing');
+          setFinalScores(null);
+          setFinalWinner(null);
+          break;
+        case 'GAME_ENDED':
+          setRoomStatus('finished');
+          setFinalScores(msg.scores);
+          setFinalWinner(msg.winner);
+          setControllerLayout(null);
           break;
         case 'CONTROLLER_LAYOUT':
           setControllerLayout(msg.layout);
@@ -148,6 +189,47 @@ export default function JoinPage() {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     const msg: ClientToServerMessage = { type: 'PLAYER_INPUT', payload: event };
     ws.send(JSON.stringify(msg));
+  }
+
+  // ── Game over / scores ───────────────────────────────────────────────────
+  if (joined && roomStatus === 'finished') {
+    const sortedPlayers = [...players].sort(
+      (a, b) => (finalScores?.[b.id] ?? 0) - (finalScores?.[a.id] ?? 0),
+    );
+    const winnerName = finalWinner ? players.find((p) => p.id === finalWinner)?.name : null;
+    return (
+      <main style={centeredLayout}>
+        <StatusBar status={connStatus} inline />
+        <p style={{ fontSize: '3rem' }}>🏆</p>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>Game Over!</h1>
+        {winnerName && (
+          <p style={{ color: '#fbbf24', fontWeight: 700, fontSize: '1.1rem' }}>
+            🥇 {winnerName} wins!
+          </p>
+        )}
+        {sortedPlayers.length > 0 && (
+          <div style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {sortedPlayers.map((p, i) => (
+              <div
+                key={p.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.75rem',
+                  padding: '0.6rem 1rem', borderRadius: '0.5rem',
+                  background: p.id === ownPlayerId ? 'rgba(99,102,241,0.2)' : '#1f1f35',
+                  border: p.id === ownPlayerId ? '2px solid var(--accent)' : '2px solid transparent',
+                }}
+              >
+                <span style={{ fontWeight: 700, color: '#6b7280', minWidth: 24 }}>#{i + 1}</span>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                <span style={{ flex: 1, fontWeight: 600 }}>{p.name}</span>
+                <span style={{ fontWeight: 800, color: '#a78bfa' }}>{finalScores?.[p.id] ?? 0} pts</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p style={{ color: 'var(--accent-light)', fontSize: '0.875rem' }}>Waiting for next game…</p>
+      </main>
+    );
   }
 
   // ── Playing with layout ──────────────────────────────────────────────────

@@ -206,17 +206,27 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
         case 'HOST_END_GAME': {
           const room = roomManager.getRoomBySocketId(socketId);
           if (!room || room.hostSocketId !== socketId) return;
-          const engine = gameEngines.get(room.id);
-          const final = engine?.end() ?? { scores: {}, winner: null };
-          gameEngines.delete(room.id);
-          room.status = 'finished';
-          room.currentGame = null;
           const allSocketIds = room.players.map((p) => p.socketId);
-          broadcast(allSocketIds, {
-            type: 'GAME_ENDED',
-            scores: final.scores,
-            winner: final.winner,
-          });
+
+          // If there's an active engine, end it and broadcast final scores
+          const engine = gameEngines.get(room.id);
+          if (engine) {
+            const final = engine.end();
+            gameEngines.delete(room.id);
+            broadcast(allSocketIds, {
+              type: 'GAME_ENDED',
+              scores: final.scores,
+              winner: final.winner,
+            });
+          }
+
+          // Reset room to waiting so players can ready up for the next game
+          room.status = 'waiting';
+          room.currentGame = null;
+          for (const p of room.players) {
+            if (!p.isHost) p.isReady = false;
+          }
+          broadcast(allSocketIds, { type: 'ROOM_STATUS_CHANGED', status: 'waiting' });
           break;
         }
       }
