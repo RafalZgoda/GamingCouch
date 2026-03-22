@@ -71,11 +71,34 @@ interface MathRaceData {
   playerAnswers?: Record<string, number>;
 }
 
+// Word Scramble data shape
+interface WordScrambleData {
+  scrambled: string;
+  options: string[];
+  correctIndex: number;
+  round: number;
+  totalRounds: number;
+  timeRemainingMs: number;
+  answeredPlayerIds: string[];
+  playerAnswers?: Record<string, number>;
+}
+
+// Hot Potato data shape
+interface HotPotatoData {
+  holderPlayerId: string;
+  round: number;
+  totalRounds: number;
+  ticking: boolean;
+  explodedPlayerId?: string;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
   colormatch: '🎨 Color Match',
   mathrace: '🔢 Math Race',
+  wordscramble: '🔤 Word Scramble',
+  hotpotato: '🥔 Hot Potato',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -667,6 +690,140 @@ function MathRaceHostView({ state, players }: { state: GameState; players: Playe
   );
 }
 
+// ── Word Scramble Host View ───────────────────────────────────────────────────
+
+const WS_ANSWER_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+const WS_ANSWER_LABELS = ['A', 'B', 'C', 'D'];
+
+function WordScrambleHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as WordScrambleData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const isReveal = state.phase === 'round_end';
+  const timerFraction = data.timeRemainingMs / 15_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.875rem' }}>
+          Round {data.round} / {data.totalRounds}
+        </p>
+
+        {!isReveal && (
+          <div style={{ width: '100%', maxWidth: 600, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+          </div>
+        )}
+
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Unscramble this word:</p>
+          <h1 style={{ fontSize: 'clamp(3rem, 8vw, 6rem)', fontWeight: 900, letterSpacing: '0.4rem', color: '#a78bfa', fontFamily: 'monospace' }}>
+            {data.scrambled}
+          </h1>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 700 }}>
+          {data.options.map((option, i) => {
+            const isCorrect = isReveal && data.correctIndex === i;
+            const color = WS_ANSWER_COLORS[i]!;
+            const bg = isReveal ? (isCorrect ? `${color}33` : '#0d0d1f') : '#1a1a2e';
+            const border = isReveal ? (isCorrect ? `2px solid ${color}` : `2px solid ${color}22`) : `2px solid ${color}44`;
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 1.25rem', background: bg, border, borderRadius: 12, transition: 'all 0.3s' }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1.1rem', flexShrink: 0 }}>
+                  {WS_ANSWER_LABELS[i]}
+                </div>
+                <span style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '0.05rem' }}>{option}</span>
+                {isCorrect && <span style={{ marginLeft: 'auto' }}>✓</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {!isReveal && (
+          <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+            {data.answeredPlayerIds.length} / {nonHostPlayers.length} answered
+          </p>
+        )}
+      </div>
+
+      <div style={{ background: '#0d0d1f', borderLeft: '1px solid #1f1f35', padding: '1.5rem 1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Leaderboard</p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.75rem', background: i === 0 ? '#1a1036' : '#131326', borderRadius: 8 }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center', color: '#6b7280' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}</span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Hot Potato Host View ───────────────────────────────────────────────────────
+
+function HotPotatoHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as HotPotatoData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const holder = nonHostPlayers.find((p) => p.id === data.holderPlayerId);
+  const exploded = nonHostPlayers.find((p) => p.id === data.explodedPlayerId);
+  const isReveal = state.phase === 'round_end';
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '2rem' }}>
+        <p style={{ color: '#6b7280', fontWeight: 700, fontSize: '0.875rem' }}>
+          Round {data.round} / {data.totalRounds}
+        </p>
+
+        {isReveal && exploded ? (
+          <>
+            <div style={{ fontSize: '6rem', animation: 'none' }}>💥</div>
+            <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#ef4444' }}>{exploded.name} got burned!</h2>
+            <p style={{ color: '#6b7280' }}>−500 points</p>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: '7rem', filter: 'drop-shadow(0 0 40px #f9731688)' }}>🥔</div>
+            {holder && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1f1028', border: '2px solid #f97316', borderRadius: '1rem', padding: '0.875rem 1.5rem' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: AVATAR_COLOR_HEX[holder.avatarColor], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: '#fff', fontSize: '1.1rem' }}>
+                    {holder.name[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <p style={{ fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>{holder.name}</p>
+                    <p style={{ color: '#f97316', fontSize: '0.8rem', margin: 0 }}>is holding the potato!</p>
+                  </div>
+                </div>
+                <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                  Tap <strong style={{ color: '#f97316' }}>PASS 🥔</strong> on your phone to pass it!
+                </p>
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      <div style={{ background: '#0d0d1f', borderLeft: '1px solid #1f1f35', padding: '1.5rem 1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <p style={{ color: '#6b7280', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Leaderboard</p>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.625rem 0.75rem', background: p.id === data.holderPlayerId && !isReveal ? '#2a1205' : i === 0 ? '#1a1036' : '#131326', borderRadius: 8, border: p.id === data.holderPlayerId && !isReveal ? '1px solid #f97316' : '1px solid transparent' }}>
+            <span style={{ fontSize: '1rem', width: 24, textAlign: 'center' }}>{p.id === data.holderPlayerId && !isReveal ? '🥔' : i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}</span>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ flex: 1, fontSize: '0.875rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            <span style={{ fontSize: '0.875rem', fontWeight: 800, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Game View ─────────────────────────────────────────────────────────────────
 
 function GameView({
@@ -750,6 +907,14 @@ function GameView({
     return <MathRaceHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'wordscramble' && gameState) {
+    return <WordScrambleHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'hotpotato' && gameState) {
+    return <HotPotatoHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -783,7 +948,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   const addToast = useCallback((message: string, color: string) => {
@@ -1023,7 +1188,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}

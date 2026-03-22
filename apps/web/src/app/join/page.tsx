@@ -10,9 +10,16 @@ import {
   ControllerLayout,
   ControllerInputEvent,
   Player,
+  GameDefinition,
+  WS_PORT,
 } from '@gamingcouch/shared';
 import ControllerView from './ControllerView';
 import { getWsUrl } from '@/lib/wsUrl';
+
+function getApiUrl(): string {
+  if (typeof window !== 'undefined') return window.location.origin;
+  return `http://localhost:${WS_PORT}`;
+}
 
 type ConnStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
@@ -39,6 +46,8 @@ export default function JoinPage() {
   const [ownPlayerId, setOwnPlayerId] = useState<string | null>(null);
   const [finalScores, setFinalScores] = useState<Record<string, number> | null>(null);
   const [finalWinner, setFinalWinner] = useState<string | null>(null);
+  const [games, setGames] = useState<GameDefinition[]>([]);
+  const [startingGame, setStartingGame] = useState<string | null>(null);
 
   // Saved join params for reconnect
   const joinParamsRef = useRef<{ code: string; name: string; avatarColor: AvatarColor } | null>(null);
@@ -51,6 +60,15 @@ export default function JoinPage() {
     const hash = window.location.hash.slice(1);
     if (/^\d{4}$/.test(hash)) setCode(hash);
   }, []);
+
+  // Fetch available games when entering the lobby
+  useEffect(() => {
+    if (!joined) return;
+    fetch(`${getApiUrl()}/api/games`)
+      .then((r) => r.json())
+      .then((data: GameDefinition[]) => setGames(data))
+      .catch(() => {});
+  }, [joined]);
 
   const connect = useCallback((joinCode: string, joinName: string, color: AvatarColor, isReconnect = false) => {
     if (reconnectTimer.current) {
@@ -113,6 +131,7 @@ export default function JoinPage() {
           setRoomStatus('playing');
           setFinalScores(null);
           setFinalWinner(null);
+          setStartingGame(null);
           break;
         case 'GAME_ENDED':
           setRoomStatus('finished');
@@ -182,6 +201,14 @@ export default function JoinPage() {
     const msg: ClientToServerMessage = { type: 'PLAYER_READY' };
     ws.send(JSON.stringify(msg));
     setIsReady(true);
+  }
+
+  function handleStartGame(gameId: string) {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    setStartingGame(gameId);
+    const msg: ClientToServerMessage = { type: 'PLAYER_START_GAME', gameId };
+    ws.send(JSON.stringify(msg));
   }
 
   function sendInput(event: ControllerInputEvent) {
@@ -257,30 +284,102 @@ export default function JoinPage() {
   // ── Lobby ────────────────────────────────────────────────────────────────
   if (joined) {
     return (
-      <main style={centeredLayout}>
+      <main style={{ ...centeredLayout, justifyContent: 'flex-start', paddingTop: '1.5rem' }}>
         <StatusBar status={connStatus} inline />
-        <div
-          style={{
-            width: 80, height: 80, borderRadius: '50%',
-            background: AVATAR_COLOR_HEX[avatarColor],
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '2rem', fontWeight: 800, color: '#fff',
-          }}
-        >
-          {name[0]?.toUpperCase() ?? '?'}
+
+        {/* Avatar + name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div
+            style={{
+              width: 48, height: 48, borderRadius: '50%',
+              background: AVATAR_COLOR_HEX[avatarColor],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.25rem', fontWeight: 800, color: '#fff', flexShrink: 0,
+            }}
+          >
+            {name[0]?.toUpperCase() ?? '?'}
+          </div>
+          <div>
+            <p style={{ fontWeight: 700, margin: 0 }}>{name}</p>
+            <p style={{ color: 'var(--accent-light)', fontSize: '0.8rem', margin: 0 }}>
+              {players.length + 1} player{players.length + 1 !== 1 ? 's' : ''} in lobby
+            </p>
+          </div>
         </div>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800 }}>{name}</h1>
-        <p style={{ color: 'var(--accent-light)' }}>
-          {roomStatus === 'ready' ? '🟢 All players ready! Waiting for host…' : 'Waiting in lobby…'}
-        </p>
-        {!isReady && (
-          <button onClick={handleReady} style={primaryBtn}>
+
+        {/* Other players chips */}
+        {players.length > 0 && (
+          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'center', maxWidth: 320 }}>
+            {players.map((p) => (
+              <div key={p.id} style={{
+                display: 'flex', alignItems: 'center', gap: '0.35rem',
+                background: '#1f1f35', borderRadius: '9999px',
+                padding: '0.25rem 0.6rem', fontSize: '0.8rem',
+              }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                {p.name}
+                {p.isReady && <span style={{ color: '#22c55e' }}>✓</span>}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Ready button */}
+        {!isReady ? (
+          <button onClick={handleReady} style={{ ...primaryBtn, padding: '0.6rem 1.5rem', fontSize: '0.95rem' }}>
             I&apos;m Ready!
           </button>
+        ) : (
+          <p style={{ color: '#22c55e', fontWeight: 700, fontSize: '0.9rem' }}>✓ You&apos;re ready</p>
         )}
-        {isReady && (
-          <p style={{ color: '#22c55e', fontWeight: 700 }}>✓ You&apos;re ready</p>
+
+        {/* Game picker */}
+        {games.length > 0 && (
+          <>
+            <p style={{ color: 'var(--accent-light)', fontWeight: 600, fontSize: '0.875rem', margin: '0.5rem 0 0' }}>
+              Choose a game to start:
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: 340 }}>
+              {games.map((g) => (
+                <div
+                  key={g.id}
+                  style={{
+                    background: '#1a1a2e',
+                    border: '2px solid #2d2d4e',
+                    borderRadius: '0.75rem',
+                    padding: '0.875rem 1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.35rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: 700, fontSize: '1rem' }}>{g.name}</span>
+                    <button
+                      onClick={() => handleStartGame(g.id)}
+                      disabled={startingGame !== null}
+                      style={{
+                        padding: '0.4rem 0.9rem',
+                        background: startingGame === g.id ? '#4f46e5' : 'var(--accent)',
+                        color: '#fff', border: 'none', borderRadius: '0.5rem',
+                        fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer',
+                        opacity: startingGame !== null && startingGame !== g.id ? 0.5 : 1,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {startingGame === g.id ? '⏳' : '▶ Start'}
+                    </button>
+                  </div>
+                  <p style={{ color: 'var(--accent-light)', fontSize: '0.8rem', margin: 0 }}>{g.description}</p>
+                  <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0 }}>
+                    {g.minPlayers}–{g.maxPlayers} players
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
         )}
+
         {error && <p style={{ color: '#f87171' }}>{error}</p>}
       </main>
     );

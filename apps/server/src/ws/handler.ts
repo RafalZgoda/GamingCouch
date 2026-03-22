@@ -82,6 +82,61 @@ export function setupWebSocketServer(wss: WebSocketServer, roomManager: RoomMana
           break;
         }
 
+        case 'PLAYER_START_GAME': {
+          // Any player in the room can start the game from their phone.
+          const room = roomManager.getRoomBySocketId(socketId);
+          if (!room) {
+            send(ws, { type: 'ERROR', message: 'Not in a room' });
+            return;
+          }
+
+          gameEngines.get(room.id)?.end();
+          gameEngines.delete(room.id);
+
+          room.status = 'playing';
+          room.currentGame = msg.gameId;
+          const allSocketIdsPs = room.players.map((p) => p.socketId);
+
+          let enginePs: GameEngine;
+          try {
+            enginePs = new GameEngine(
+              room.id,
+              msg.gameId,
+              (state) => {
+                broadcast(allSocketIdsPs, { type: 'GAME_STATE_UPDATE', state });
+                if (state.controllerLayout) {
+                  const playerSocketIds = allSocketIdsPs.filter((id) => id !== room.hostSocketId);
+                  broadcast(playerSocketIds, { type: 'CONTROLLER_LAYOUT', layout: state.controllerLayout });
+                  roomLayouts.set(room.id, state.controllerLayout);
+                }
+              },
+              (final) => {
+                room.status = 'finished';
+                room.currentGame = null;
+                broadcast(allSocketIdsPs, { type: 'GAME_ENDED', scores: final.scores, winner: final.winner });
+                gameEngines.delete(room.id);
+              },
+              msg.config,
+            );
+          } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unknown game';
+            send(ws, { type: 'ERROR', message });
+            return;
+          }
+
+          gameEngines.set(room.id, enginePs);
+          const initialStatePs = enginePs.start(room.players);
+          broadcast(allSocketIdsPs, { type: 'GAME_STARTED', gameId: msg.gameId });
+          broadcast(allSocketIdsPs, { type: 'GAME_STATE_UPDATE', state: initialStatePs });
+
+          const layoutPs = initialStatePs.controllerLayout ?? roomLayouts.get(room.id);
+          if (layoutPs) {
+            const playerSocketIds = allSocketIdsPs.filter((id) => id !== room.hostSocketId);
+            broadcast(playerSocketIds, { type: 'CONTROLLER_LAYOUT', layout: layoutPs });
+          }
+          break;
+        }
+
         case 'HOST_KICK_PLAYER': {
           const result = roomManager.kickPlayer(socketId, msg.playerId);
           if (!result) {

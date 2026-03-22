@@ -9,3 +9,5 @@ import '../trivia/TriviaGame.js';
 import '../reaction/ReactionGame.js';
 import '../colormatch/ColorMatchGame.js';
 import '../mathrace/MathRaceGame.js';
+import '../wordscramble/WordScrambleGame.js';
+import '../hotpotato/HotPotatoGame.js';

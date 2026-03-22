@@ -9,6 +9,7 @@ export type ClientToServerMessage =
   | { type: 'PLAYER_JOIN_ROOM'; code: string; playerName: string; avatarColor: AvatarColor }
   | { type: 'PLAYER_READY' }
   | { type: 'HOST_START_GAME'; gameId: string; config?: Record<string, unknown> }
+  | { type: 'PLAYER_START_GAME'; gameId: string; config?: Record<string, unknown> }
   | { type: 'HOST_KICK_PLAYER'; playerId: string }
   | { type: 'HOST_SET_CONTROLLER_LAYOUT'; layout: ControllerLayout }
   | { type: 'PLAYER_INPUT'; payload: ControllerInputEvent }
