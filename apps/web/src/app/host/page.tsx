@@ -124,6 +124,7 @@ interface BlindTestData {
   totalQuestions: number;
   timeRemainingMs: number;
   answeredPlayerIds: string[];
+  previewUrl?: string;
   correctAnswer?: number;
   playerAnswers?: Record<string, number>;
 }
@@ -1101,6 +1102,24 @@ function BlindTestHostView({ state, players }: { state: GameState; players: Play
   const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
   const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
 
+  // Audio playback — play preview when available, stop on reveal
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  useEffect(() => {
+    if (!audioRef.current) audioRef.current = new Audio();
+    const audio = audioRef.current;
+    if (data.previewUrl && !isReveal) {
+      if (audio.src !== data.previewUrl) {
+        audio.src = data.previewUrl;
+        audio.volume = 0.5;
+        audio.loop = true;
+        void audio.play().catch(() => {/* autoplay blocked – user gesture needed */});
+      }
+    } else {
+      audio.pause();
+    }
+    return () => { audio.pause(); };
+  }, [data.previewUrl, isReveal]);
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
       <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden' }}>
@@ -1153,8 +1172,19 @@ function BlindTestHostView({ state, players }: { state: GameState; players: Play
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: '2rem',
         }}>
-          {/* Musical note icon */}
-          <div style={{ fontSize: '3rem', animation: 'float 3s ease-in-out infinite' }}>🎵</div>
+          {/* Musical note icon + audio indicator */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ fontSize: '3rem', animation: 'float 3s ease-in-out infinite' }}>🎵</div>
+            {data.previewUrl && !isReveal && (
+              <span style={{
+                fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                color: '#a78bfa', background: 'rgba(124,58,237,0.15)',
+                padding: '0.2rem 0.7rem', borderRadius: '9999px',
+              }}>
+                ♪ Playing
+              </span>
+            )}
+          </div>
 
           {/* Lyric hint */}
           <div style={{

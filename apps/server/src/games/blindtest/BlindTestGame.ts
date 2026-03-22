@@ -78,6 +78,29 @@ const BLINDTEST_LAYOUT: ControllerLayout = {
   ],
 };
 
+// ── iTunes preview fetcher ────────────────────────────────────────────────────
+
+async function fetchItunesPreview(title: string, artist: string): Promise<string | undefined> {
+  try {
+    const q = encodeURIComponent(`${title} ${artist}`);
+    const res = await fetch(`https://itunes.apple.com/search?term=${q}&entity=song&limit=5`);
+    if (!res.ok) return undefined;
+    const json = (await res.json()) as { results?: Array<{ previewUrl?: string; trackName?: string; artistName?: string }> };
+    // Prefer an exact match, fall back to first result with a preview
+    const results = json.results ?? [];
+    const exact = results.find(
+      (r) =>
+        r.trackName?.toLowerCase() === title.toLowerCase() &&
+        r.artistName?.toLowerCase() === artist.toLowerCase() &&
+        r.previewUrl,
+    );
+    const fallback = results.find((r) => r.previewUrl);
+    return (exact ?? fallback)?.previewUrl;
+  } catch {
+    return undefined;
+  }
+}
+
 // ── Public state shape ────────────────────────────────────────────────────────
 
 export interface BlindTestData {
@@ -89,6 +112,7 @@ export interface BlindTestData {
   totalQuestions: number;
   timeRemainingMs: number;
   answeredPlayerIds: string[];
+  previewUrl?: string; // 30-second iTunes preview for the current song
   correctAnswer?: number; // index in options
   playerAnswers?: Record<string, number>;
 }
@@ -116,6 +140,7 @@ export class BlindTestGame extends BaseGame {
   private currentRoundScores: Record<string, number> = {};
   private currentOptions: string[] = [];
   private currentCorrectIndex = 0;
+  private currentPreviewUrl: string | undefined = undefined;
 
   constructor(config?: Record<string, unknown>) {
     super();
@@ -174,11 +199,17 @@ export class BlindTestGame extends BaseGame {
     this.questionStartMs = Date.now();
     this.isRevealing = false;
     this.currentRoundScores = {};
+    this.currentPreviewUrl = undefined;
     this.phase = 'active';
     this.round = this.currentIndex + 1;
 
     // Build options: correct answer + 3 random wrong answers
     const correct = this.questions[this.currentIndex]!;
+
+    // Fetch iTunes 30-second preview in the background (fire-and-forget)
+    void fetchItunesPreview(correct.title, correct.artist).then((url) => {
+      if (url) this.currentPreviewUrl = url;
+    });
     const wrongPool = SONGS.filter(
       (s) => s.title !== correct.title || s.artist !== correct.artist,
     ).sort(() => Math.random() - 0.5);
@@ -230,6 +261,7 @@ export class BlindTestGame extends BaseGame {
           totalQuestions: this.questions.length,
           timeRemainingMs: Math.max(0, this.timerMs),
           answeredPlayerIds: [...this.playerAnswers.keys()],
+          previewUrl: this.isRevealing ? undefined : this.currentPreviewUrl,
           ...(this.isRevealing && {
             correctAnswer: this.currentCorrectIndex,
             playerAnswers: Object.fromEntries(
