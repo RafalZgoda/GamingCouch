@@ -1205,6 +1205,9 @@ export default function HostPage() {
   // Game picker state
   const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [selectedRounds, setSelectedRounds] = useState(5);
+  // Session scores — cumulative across all games in this party session
+  const [sessionScores, setSessionScores] = useState<Record<string, number>>({});
 
   const addToast = useCallback((message: string, color: string) => {
     const id = ++toastCounterRef.current;
@@ -1267,6 +1270,13 @@ export default function HostPage() {
           break;
         case 'GAME_ENDED':
           setScores(msg.scores);
+          setSessionScores((prev) => {
+            const next = { ...prev };
+            for (const [id, pts] of Object.entries(msg.scores)) {
+              next[id] = (next[id] ?? 0) + pts;
+            }
+            return next;
+          });
           break;
       }
     };
@@ -1285,7 +1295,8 @@ export default function HostPage() {
   function startGame() {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    const config = selectedGame === 'trivia' ? { difficulty: triviaDifficulty } : undefined;
+    const config: Record<string, unknown> = { rounds: selectedRounds };
+    if (selectedGame === 'trivia') config.difficulty = triviaDifficulty;
 
     ws.send(JSON.stringify({ type: 'HOST_START_GAME', gameId: selectedGame, config } satisfies ClientToServerMessage));
   }
@@ -1344,48 +1355,76 @@ export default function HostPage() {
   return (
     <>
       <ToastContainer toasts={toasts} />
-      <style>{`
-        @keyframes slideIn {
-          from { opacity: 0; transform: translateX(16px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-      `}</style>
-      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', height: '100vh' }}>
+      <div style={{
+        display: 'grid', gridTemplateColumns: '360px 1fr', height: '100vh',
+        background: 'radial-gradient(ellipse at 0% 50%, rgba(124,58,237,0.08) 0%, transparent 50%), #0a0a12',
+      }}>
 
+        {/* ── QR Panel (left) ── */}
         <div
           style={{
-            background: '#13131f',
-            borderRight: '1px solid #2d2d4e',
+            background: 'linear-gradient(180deg, rgba(20,20,40,0.8) 0%, rgba(15,15,30,0.9) 100%)',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '1.5rem',
+            gap: '1.75rem',
             padding: '2rem',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          <p style={{ fontSize: '1.5rem', fontWeight: 800 }}>🎮 GamingCouch</p>
+          {/* Subtle glow */}
+          <div style={{
+            position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: 300, height: 300, borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
 
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ color: '#6b7280', fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
+          <p style={{
+            fontSize: '1.5rem', fontWeight: 900, position: 'relative',
+            background: 'linear-gradient(135deg, #fff 0%, #a78bfa 100%)',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
+            GamingCouch
+          </p>
+
+          <div style={{ textAlign: 'center', position: 'relative' }}>
+            <p style={{ color: '#8888aa', fontSize: '0.7rem', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.75rem', fontWeight: 600 }}>
               Scan to join
             </p>
-            {roomCode && <QRCodeCanvas text={joinUrl} size={180} />}
+            <div style={{
+              padding: 12, borderRadius: 16,
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              display: 'inline-block',
+            }}>
+              {roomCode && <QRCodeCanvas text={joinUrl} size={180} />}
+            </div>
           </div>
 
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ color: '#6b7280', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Room Code</p>
-            <p style={{ fontSize: '3.5rem', fontWeight: 900, letterSpacing: '0.5rem', color: '#fff', lineHeight: 1 }}>
+          <div style={{ textAlign: 'center', position: 'relative' }}>
+            <p style={{ color: '#8888aa', fontSize: '0.7rem', marginBottom: '0.35rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>Room Code</p>
+            <p style={{
+              fontSize: '3.5rem', fontWeight: 900, letterSpacing: '0.6rem', lineHeight: 1,
+              background: 'linear-gradient(135deg, #fff 0%, #a78bfa 100%)',
+              WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            }}>
               {roomCode}
             </p>
-            <p style={{ color: '#4b5563', fontSize: '0.75rem', marginTop: '0.4rem' }}>
+            <p style={{ color: '#555577', fontSize: '0.75rem', marginTop: '0.5rem' }}>
               gamingcouch.app/join
             </p>
           </div>
 
-          <div style={{ width: '100%', height: 1, background: '#2d2d4e' }} />
+          <div style={{
+            width: '80%', height: 1,
+            background: 'linear-gradient(90deg, transparent, rgba(124,58,237,0.3), transparent)',
+          }} />
 
-          <p style={{ color: '#6b7280', fontSize: '0.875rem', textAlign: 'center' }}>
+          <p style={{ color: '#8888aa', fontSize: '0.85rem', textAlign: 'center', position: 'relative' }}>
             Phone as controller.<br />No app needed.
           </p>
         </div>
@@ -1394,13 +1433,23 @@ export default function HostPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>Lobby</h1>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+              <h1 style={{
+                fontSize: '2rem', fontWeight: 900,
+                background: 'linear-gradient(135deg, #fff 0%, #a78bfa 100%)',
+                WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>Lobby</h1>
+              <p style={{ color: '#8888aa', fontSize: '0.875rem', marginTop: '0.25rem' }}>
                 {nonHostPlayers.length} / 8 players connected
               </p>
             </div>
             {status === 'ready' && (
-              <span style={{ background: '#14532d', color: '#22c55e', padding: '0.35rem 0.875rem', borderRadius: '9999px', fontWeight: 700, fontSize: '0.875rem' }}>
+              <span style={{
+                background: 'rgba(34,197,94,0.1)', color: '#22c55e',
+                padding: '0.4rem 1rem', borderRadius: '9999px',
+                fontWeight: 700, fontSize: '0.875rem',
+                border: '1px solid rgba(34,197,94,0.25)',
+                animation: 'pulse 2s ease-in-out infinite',
+              }}>
                 All Ready!
               </span>
             )}
@@ -1425,12 +1474,12 @@ export default function HostPage() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   height: 200,
-                  color: '#4b5563',
+                  color: '#555577',
                   gap: '0.75rem',
                 }}
               >
-                <p style={{ fontSize: '3rem' }}>👥</p>
-                <p style={{ fontSize: '1rem' }}>Waiting for players…</p>
+                <p style={{ fontSize: '3rem', animation: 'float 4s ease-in-out infinite' }}>👥</p>
+                <p style={{ fontSize: '1rem', color: '#8888aa' }}>Waiting for players…</p>
                 <p style={{ fontSize: '0.8rem' }}>Share the room code or QR code on the left</p>
               </div>
             ) : (
@@ -1439,6 +1488,35 @@ export default function HostPage() {
               ))
             )}
           </div>
+
+          {/* ── Session standings ── */}
+          {Object.keys(sessionScores).length > 0 && (
+            <div style={{ flexShrink: 0, background: '#0d0d1f', border: '1px solid #1f1f35', borderRadius: '0.75rem', padding: '0.875rem 1rem' }}>
+              <p style={{ color: '#6b7280', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+                🏆 Session Standings
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {[...nonHostPlayers]
+                  .sort((a, b) => (sessionScores[b.id] ?? 0) - (sessionScores[a.id] ?? 0))
+                  .map((p, i) => (
+                    <div key={p.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '0.375rem',
+                      padding: '0.3rem 0.7rem',
+                      background: i === 0 ? '#1a1036' : '#131326',
+                      border: `1px solid ${i === 0 ? '#7c3aed44' : 'transparent'}`,
+                      borderRadius: '9999px',
+                    }}>
+                      <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                      </span>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>{p.name}</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#a78bfa' }}>{sessionScores[p.id] ?? 0}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
@@ -1490,6 +1568,29 @@ export default function HostPage() {
                 })}
               </div>
             )}
+
+            {/* ── Round picker ── */}
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center' }}>
+              <span style={{ color: '#6b7280', fontSize: '0.8rem', fontWeight: 600 }}>Rounds:</span>
+              {([3, 5, 8, 10] as const).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setSelectedRounds(n)}
+                  style={{
+                    padding: '0.3rem 0.75rem',
+                    borderRadius: '9999px',
+                    border: `2px solid ${selectedRounds === n ? 'var(--accent)' : '#374151'}`,
+                    background: selectedRounds === n ? '#1e1b4b' : 'transparent',
+                    color: selectedRounds === n ? '#a78bfa' : '#6b7280',
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <button

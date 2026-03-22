@@ -58,6 +58,14 @@ export class ReactionGame extends BaseGame {
     maxPlayers: 8,
   };
 
+  private readonly configRounds: number;
+
+  constructor(config?: Record<string, unknown>) {
+    super();
+    const r = config?.rounds;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : ROUNDS;
+  }
+
   private signal: 'waiting' | 'go' = 'waiting';
   private waitMs = 0;
   private goMs = 0;
@@ -72,7 +80,7 @@ export class ReactionGame extends BaseGame {
   // ── BaseGame hooks ──────────────────────────────────────────────────────────
 
   protected onInit(_players: Player[]): GameState {
-    this.totalRounds = ROUNDS;
+    this.totalRounds = this.configRounds;
     this.startWaiting();
     return this.currentState(true);
   }
@@ -214,5 +222,5 @@ GameRegistry.register(
     minPlayers: 1,
     maxPlayers: 8,
   },
-  () => new ReactionGame(),
+  (config) => new ReactionGame(config),
 );

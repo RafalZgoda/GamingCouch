@@ -141,6 +141,7 @@ export class MathRaceGame extends BaseGame {
     maxPlayers: 8,
   };
 
+  private readonly configRounds: number;
   private questions: MathQuestion[] = [];
   private currentIndex = 0;
   private timerMs = 0;
@@ -151,11 +152,17 @@ export class MathRaceGame extends BaseGame {
   private questionStartMs = 0;
   private currentRoundScores: Record<string, number> = {};
 
+  constructor(config?: Record<string, unknown>) {
+    super();
+    const r = config?.rounds;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : ROUNDS;
+  }
+
   // ── BaseGame hooks ──────────────────────────────────────────────────────────
 
   protected onInit(_players: Player[]): GameState {
-    this.questions = Array.from({ length: ROUNDS }, generateQuestion);
-    this.totalRounds = ROUNDS;
+    this.questions = Array.from({ length: this.configRounds }, generateQuestion);
+    this.totalRounds = this.configRounds;
     this.currentIndex = 0;
     this.startQuestion();
     return this.currentState();
@@ -280,5 +287,5 @@ GameRegistry.register(
     minPlayers: 1,
     maxPlayers: 8,
   },
-  () => new MathRaceGame(),
+  (config) => new MathRaceGame(config),
 );

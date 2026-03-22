@@ -46,13 +46,20 @@ export class TapFrenzyGame extends BaseGame {
     maxPlayers: 8,
   };
 
+  private readonly configRounds: number;
   private tappingPhase: 'countdown' | 'tapping' | 'reveal' = 'countdown';
   private timerMs = 0;
   private playerTaps: Record<string, number> = {};
   private currentRoundScores: Record<string, number> = {};
 
+  constructor(config?: Record<string, unknown>) {
+    super();
+    const r = config?.rounds;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : TOTAL_ROUNDS;
+  }
+
   protected onInit(_players: Player[]): GameState {
-    this.totalRounds = TOTAL_ROUNDS;
+    this.totalRounds = this.configRounds;
     this.round = 1;
     this.startCountdown();
     return this.currentState();
@@ -144,5 +151,5 @@ GameRegistry.register(
     minPlayers: 1,
     maxPlayers: 8,
   },
-  () => new TapFrenzyGame(),
+  (config) => new TapFrenzyGame(config),
 );

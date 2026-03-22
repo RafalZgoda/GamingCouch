@@ -80,6 +80,7 @@ export class WordScrambleGame extends BaseGame {
     maxPlayers: 8,
   };
 
+  private readonly configRounds: number;
   private word = '';
   private scrambled = '';
   private options: string[] = [];
@@ -91,10 +92,16 @@ export class WordScrambleGame extends BaseGame {
   private correctOrder: string[] = [];               // ordered by who answered correctly first
   private usedWords: Set<string> = new Set();
 
+  constructor(config?: Record<string, unknown>) {
+    super();
+    const r = config?.rounds;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : ROUNDS;
+  }
+
   // ── BaseGame hooks ──────────────────────────────────────────────────────────
 
   protected onInit(_players: Player[]): GameState {
-    this.totalRounds = ROUNDS;
+    this.totalRounds = this.configRounds;
     this.startRound();
     return this.currentState();
   }
@@ -219,5 +226,5 @@ GameRegistry.register(
     minPlayers: 1,
     maxPlayers: 8,
   },
-  () => new WordScrambleGame(),
+  (config) => new WordScrambleGame(config),
 );

@@ -135,6 +135,7 @@ export class TriviaGame extends BaseGame {
 
   private readonly difficulty: Difficulty;
   private readonly questionTimeMs: number;
+  private readonly configRounds: number;
   private questions: TriviaQuestion[] = [];
   private currentQuestionIndex = 0;
   private timerMs = 0;
@@ -150,6 +151,8 @@ export class TriviaGame extends BaseGame {
     const raw = config?.difficulty;
     this.difficulty = (raw === 'easy' || raw === 'medium' || raw === 'hard') ? raw : 'medium';
     this.questionTimeMs = QUESTION_TIME_MS[this.difficulty];
+    const r = config?.rounds;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : QUESTIONS_PER_GAME;
   }
 
   // ── BaseGame hooks ──────────────────────────────────────────────────────────
@@ -157,7 +160,7 @@ export class TriviaGame extends BaseGame {
   protected onInit(_players: Player[]): GameState {
     const pool = QUESTION_BANK.filter((q) => q.difficulty === this.difficulty);
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
-    this.questions = shuffled.slice(0, Math.min(QUESTIONS_PER_GAME, shuffled.length));
+    this.questions = shuffled.slice(0, Math.min(this.configRounds, shuffled.length));
     this.totalRounds = this.questions.length;
     this.currentQuestionIndex = 0;
     this.startQuestion();

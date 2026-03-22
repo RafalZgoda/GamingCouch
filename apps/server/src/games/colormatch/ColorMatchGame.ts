@@ -72,14 +72,21 @@ export class ColorMatchGame extends BaseGame {
   private showMs = 0;
   private revealMs = 0;
   private isRevealing = false;
+  private readonly configRounds: number;
   private roundStartMs = 0;
   private playerTaps = new Map<string, { button: string; timeMs: number }>();
   private currentRoundScores: Record<string, number> = {};
 
+  constructor(config?: Record<string, unknown>) {
+    super();
+    const r = config?.rounds;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : ROUNDS;
+  }
+
   // ── BaseGame hooks ──────────────────────────────────────────────────────────
 
   protected onInit(_players: Player[]): GameState {
-    this.totalRounds = ROUNDS;
+    this.totalRounds = this.configRounds;
     this.startRound();
     return this.currentState();
   }
@@ -209,5 +216,5 @@ GameRegistry.register(
     minPlayers: 1,
     maxPlayers: 8,
   },
-  () => new ColorMatchGame(),
+  (config) => new ColorMatchGame(config),
 );

@@ -99,6 +99,7 @@ export class TrueFalseGame extends BaseGame {
     maxPlayers: 8,
   };
 
+  private readonly configRounds: number;
   private questions: TrueFalseQuestion[] = [];
   private currentIndex = 0;
   private timerMs = 0;
@@ -109,9 +110,15 @@ export class TrueFalseGame extends BaseGame {
   private isRevealing = false;
   private currentRoundScores: Record<string, number> = {};
 
+  constructor(config?: Record<string, unknown>) {
+    super();
+    const r = config?.rounds;
+    this.configRounds = typeof r === 'number' ? Math.min(20, Math.max(3, Math.round(r))) : QUESTIONS_PER_GAME;
+  }
+
   protected onInit(_players: Player[]): GameState {
     const shuffled = [...QUESTIONS].sort(() => Math.random() - 0.5);
-    this.questions = shuffled.slice(0, Math.min(QUESTIONS_PER_GAME, shuffled.length));
+    this.questions = shuffled.slice(0, Math.min(this.configRounds, shuffled.length));
     this.totalRounds = this.questions.length;
     this.currentIndex = 0;
     this.startQuestion();
@@ -233,5 +240,5 @@ GameRegistry.register(
     minPlayers: 1,
     maxPlayers: 8,
   },
-  () => new TrueFalseGame(),
+  (config) => new TrueFalseGame(config),
 );
