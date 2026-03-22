@@ -11,3 +11,5 @@ import '../colormatch/ColorMatchGame.js';
 import '../mathrace/MathRaceGame.js';
 import '../wordscramble/WordScrambleGame.js';
 import '../hotpotato/HotPotatoGame.js';
+import '../trueorfalse/TrueFalseGame.js';
+import '../tapfrenzy/TapFrenzyGame.js';

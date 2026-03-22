@@ -48,6 +48,7 @@ export default function JoinPage() {
   const [finalWinner, setFinalWinner] = useState<string | null>(null);
   const [games, setGames] = useState<GameDefinition[]>([]);
   const [startingGame, setStartingGame] = useState<string | null>(null);
+  const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
   // Saved join params for reconnect
   const joinParamsRef = useRef<{ code: string; name: string; avatarColor: AvatarColor } | null>(null);
@@ -101,9 +102,11 @@ export default function JoinPage() {
           joinedRef.current = true;
           setJoined(true);
           const nonHostPlayers = msg.room.players.filter((p) => !p.isHost);
-          setPlayers(nonHostPlayers);
-          const self = nonHostPlayers.find((p) => p.name === name.trim());
+          // Use joinName (the parameter) not name (stale closure)
+          const self = nonHostPlayers.find((p) => p.name === joinName.trim());
           if (self) setOwnPlayerId(self.id);
+          // Exclude self from the players list — self is shown separately in the header
+          setPlayers(nonHostPlayers.filter((p) => p.id !== self?.id));
           setRoomStatus(msg.room.status);
           break;
         }
@@ -207,7 +210,8 @@ export default function JoinPage() {
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     setStartingGame(gameId);
-    const msg: ClientToServerMessage = { type: 'PLAYER_START_GAME', gameId };
+    const config = gameId === 'trivia' ? { difficulty: triviaDifficulty } : undefined;
+    const msg: ClientToServerMessage = { type: 'PLAYER_START_GAME', gameId, config };
     ws.send(JSON.stringify(msg));
   }
 
@@ -374,6 +378,31 @@ export default function JoinPage() {
                   <p style={{ color: '#6b7280', fontSize: '0.75rem', margin: 0 }}>
                     {g.minPlayers}–{g.maxPlayers} players
                   </p>
+                  {g.id === 'trivia' && (
+                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.25rem' }}>
+                      {(['easy', 'medium', 'hard'] as const).map((d) => {
+                        const colors = { easy: '#22c55e', medium: '#f59e0b', hard: '#ef4444' };
+                        const active = triviaDifficulty === d;
+                        return (
+                          <button
+                            key={d}
+                            onClick={() => setTriviaDifficulty(d)}
+                            style={{
+                              flex: 1, padding: '0.25rem 0',
+                              borderRadius: '0.375rem',
+                              border: `2px solid ${active ? colors[d] : '#374151'}`,
+                              background: active ? `${colors[d]}22` : 'transparent',
+                              color: active ? colors[d] : '#6b7280',
+                              fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer',
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {d}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
