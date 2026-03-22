@@ -13,3 +13,4 @@ import '../wordscramble/WordScrambleGame.js';
 import '../hotpotato/HotPotatoGame.js';
 import '../trueorfalse/TrueFalseGame.js';
 import '../tapfrenzy/TapFrenzyGame.js';
+import '../blindtest/BlindTestGame.js';
