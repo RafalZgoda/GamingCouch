@@ -168,6 +168,18 @@ interface DirectionDashData {
   totalRounds: number;
 }
 
+// Never Have I Ever data shape
+interface NeverHaveIEverData {
+  statement: string;
+  confessWindowMs: number;
+  confessors: string[];
+  lives: Record<string, number>;
+  eliminatedPlayers: string[];
+  round: number;
+  totalRounds: number;
+  isReveal: boolean;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -181,6 +193,7 @@ const GAME_LABELS: Record<string, string> = {
   dodgemaster: '🕹️ Dodge Master',
   swipeduel: '👆 Swipe Duel',
   directiondash: '🎯 Direction Dash',
+  neverhaveiever: '🙈 Never Have I Ever',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -1736,6 +1749,148 @@ function DirectionDashHostView({ state, players }: { state: GameState; players: 
   );
 }
 
+// ── Never Have I Ever Host View ──────────────────────────────────────────────
+
+function NeverHaveIEverHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as NeverHaveIEverData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.confessWindowMs / 8_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header: round + lives */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${(data.round / data.totalRounds) * 100}%`,
+            background: '#6366f1',
+            borderRadius: 4,
+            transition: 'width 0.3s',
+          }} />
+        </div>
+      </div>
+
+      {/* Main area */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem',
+      }}>
+        {/* Statement */}
+        <div style={{ textAlign: 'center', maxWidth: 700 }}>
+          <p style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Never have I ever...
+          </p>
+          <p style={{
+            fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.2,
+            background: 'linear-gradient(135deg, #fff 0%, #f0abfc 100%)',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
+            {data.statement}
+          </p>
+        </div>
+
+        {/* Timer bar (only during active phase) */}
+        {!data.isReveal && (
+          <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+            <div style={{ width: '100%', height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${timerFraction * 100}%`,
+                background: timerColor,
+                borderRadius: 4,
+                transition: 'width 0.1s linear, background 0.3s',
+              }} />
+            </div>
+            <span style={{ color: timerColor, fontWeight: 800, fontSize: '1.5rem' }}>
+              {Math.ceil(data.confessWindowMs / 1000)}s
+            </span>
+            <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+              Press the button on your phone if you HAVE done it...
+            </p>
+          </div>
+        )}
+
+        {/* Reveal: who confessed */}
+        {data.isReveal && (
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+            {data.confessors.length > 0 ? (
+              <>
+                <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '1.25rem' }}>
+                  Caught! 😳
+                </p>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {data.confessors.map((id) => {
+                    const p = nonHostPlayers.find((pl) => pl.id === id);
+                    if (!p) return null;
+                    return (
+                      <div key={id} style={{
+                        display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        padding: '0.5rem 1rem', borderRadius: '9999px',
+                        background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)',
+                        animation: 'fadeInScale 0.3s ease-out',
+                      }}>
+                        <div style={{
+                          width: 24, height: 24, borderRadius: '50%',
+                          background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0,
+                        }} />
+                        <span style={{ fontWeight: 700, fontSize: '1rem' }}>{p.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p style={{ color: '#22c55e', fontWeight: 700, fontSize: '1.25rem' }}>
+                Nobody confessed! 😇
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Player bar with lives */}
+      <div style={{
+        display: 'flex', gap: '0.75rem', padding: '1rem 2rem',
+        background: 'rgba(15,15,30,0.9)', justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0,
+      }}>
+        {nonHostPlayers.map((p) => {
+          const lives = data.lives[p.id] ?? 0;
+          const eliminated = data.eliminatedPlayers.includes(p.id);
+          const justConfessed = data.isReveal && data.confessors.includes(p.id);
+          return (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.5rem 0.875rem', borderRadius: '0.75rem',
+              background: eliminated ? 'rgba(239,68,68,0.1)' : justConfessed ? 'rgba(239,68,68,0.15)' : 'rgba(20,20,40,0.6)',
+              border: `1px solid ${eliminated ? 'rgba(239,68,68,0.2)' : justConfessed ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.06)'}`,
+              opacity: eliminated ? 0.5 : 1,
+            }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 800, fontSize: '0.75rem', color: '#fff',
+              }}>
+                {p.name[0]?.toUpperCase()}
+              </div>
+              <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{p.name}</span>
+              <span style={{ fontSize: '0.875rem' }}>
+                {eliminated ? '💀' : '❤️'.repeat(Math.max(0, lives))}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Game View ─────────────────────────────────────────────────────────────────
 
 function GameView({
@@ -1880,6 +2035,10 @@ function GameView({
     return <DirectionDashHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'neverhaveiever' && gameState) {
+    return <NeverHaveIEverHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -1913,7 +2072,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -2235,7 +2394,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}

@@ -17,3 +17,4 @@ import '../blindtest/BlindTestGame.js';
 import '../dodgemaster/DodgeMasterGame.js';
 import '../swipeduel/SwipeDuelGame.js';
 import '../directiondash/DirectionDashGame.js';
+import '../neverhaveiever/NeverHaveIEverGame.js';
