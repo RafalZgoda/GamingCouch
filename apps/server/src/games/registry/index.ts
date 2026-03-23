@@ -19,3 +19,4 @@ import '../swipeduel/SwipeDuelGame.js';
 import '../directiondash/DirectionDashGame.js';
 import '../neverhaveiever/NeverHaveIEverGame.js';
 import '../colorflash/ColorFlashGame.js';
+import '../wouldyourather/WouldYouRatherGame.js';

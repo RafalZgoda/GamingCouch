@@ -187,6 +187,21 @@ interface ColorFlashData {
   }>;
 }
 
+// Would You Rather data shape
+interface WouldYouRatherData {
+  optionA: string;
+  optionB: string;
+  voteWindowMs: number;
+  votedPlayerIds: string[];
+  round: number;
+  totalRounds: number;
+  isReveal: boolean;
+  revealVotesA: string[];
+  revealVotesB: string[];
+  percentA: number;
+  percentB: number;
+}
+
 // Never Have I Ever data shape
 interface NeverHaveIEverData {
   statement: string;
@@ -214,6 +229,7 @@ const GAME_LABELS: Record<string, string> = {
   directiondash: '🎯 Direction Dash',
   neverhaveiever: '🙈 Never Have I Ever',
   colorflash: '🔴 Color Flash',
+  wouldyourather: '🤔 Would You Rather',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2063,6 +2079,10 @@ function GameView({
     return <ColorFlashHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'wouldyourather' && gameState) {
+    return <WouldYouRatherHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2077,6 +2097,188 @@ function GameView({
         <p style={{ fontSize: '5rem' }}>🎮</p>
         <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#a78bfa', textTransform: 'capitalize' }}>{gameId}</h2>
         <p style={{ color: '#4b5563', fontSize: '1rem' }}>Game in progress — watch this screen!</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Would You Rather Host View ──────────────────────────────────────────────
+
+function WouldYouRatherHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as WouldYouRatherData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.voteWindowMs / 10_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${(data.round / data.totalRounds) * 100}%`,
+            background: '#6366f1',
+            borderRadius: 4,
+            transition: 'width 0.3s',
+          }} />
+        </div>
+        {!data.isReveal && (
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: timerColor }}>
+            {Math.ceil(data.voteWindowMs / 1000)}s
+          </span>
+        )}
+      </div>
+
+      {/* Title */}
+      <div style={{ textAlign: 'center', padding: '0 2rem', flexShrink: 0 }}>
+        <p style={{
+          fontSize: '1.5rem', fontWeight: 900, color: '#a78bfa',
+        }}>
+          Would you rather...
+        </p>
+      </div>
+
+      {/* Options */}
+      <div style={{
+        flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr',
+        gap: '2rem', padding: '2rem 3rem', alignItems: 'center',
+      }}>
+        {/* Option A */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', gap: '1.5rem', padding: '2rem',
+          borderRadius: 20,
+          background: data.isReveal ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)',
+          border: `2px solid ${data.isReveal ? '#3b82f6' : 'rgba(59,130,246,0.2)'}`,
+          transition: 'all 0.3s',
+        }}>
+          <span style={{
+            fontSize: '1.5rem', fontWeight: 900, color: '#3b82f6',
+            background: 'rgba(59,130,246,0.15)', borderRadius: '50%',
+            width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>A</span>
+          <p style={{
+            fontSize: '1.75rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3,
+          }}>
+            {data.optionA}
+          </p>
+          {data.isReveal && (
+            <>
+              <p style={{ fontSize: '3rem', fontWeight: 900, color: '#3b82f6' }}>{data.percentA}%</p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {data.revealVotesA.map((id) => {
+                  const p = nonHostPlayers.find((pl) => pl.id === id);
+                  if (!p) return null;
+                  return (
+                    <div key={id} style={{
+                      display: 'flex', alignItems: 'center', gap: '0.35rem',
+                      padding: '0.3rem 0.6rem', borderRadius: '9999px',
+                      background: 'rgba(59,130,246,0.15)', fontSize: '0.8rem', fontWeight: 700,
+                    }}>
+                      <div style={{
+                        width: 12, height: 12, borderRadius: '50%',
+                        background: AVATAR_COLOR_HEX[p.avatarColor],
+                      }} />
+                      {p.name}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Option B */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          justifyContent: 'center', gap: '1.5rem', padding: '2rem',
+          borderRadius: 20,
+          background: data.isReveal ? 'rgba(245,158,11,0.1)' : 'rgba(245,158,11,0.05)',
+          border: `2px solid ${data.isReveal ? '#f59e0b' : 'rgba(245,158,11,0.2)'}`,
+          transition: 'all 0.3s',
+        }}>
+          <span style={{
+            fontSize: '1.5rem', fontWeight: 900, color: '#f59e0b',
+            background: 'rgba(245,158,11,0.15)', borderRadius: '50%',
+            width: 56, height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>B</span>
+          <p style={{
+            fontSize: '1.75rem', fontWeight: 800, textAlign: 'center', lineHeight: 1.3,
+          }}>
+            {data.optionB}
+          </p>
+          {data.isReveal && (
+            <>
+              <p style={{ fontSize: '3rem', fontWeight: 900, color: '#f59e0b' }}>{data.percentB}%</p>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {data.revealVotesB.map((id) => {
+                  const p = nonHostPlayers.find((pl) => pl.id === id);
+                  if (!p) return null;
+                  return (
+                    <div key={id} style={{
+                      display: 'flex', alignItems: 'center', gap: '0.35rem',
+                      padding: '0.3rem 0.6rem', borderRadius: '9999px',
+                      background: 'rgba(245,158,11,0.15)', fontSize: '0.8rem', fontWeight: 700,
+                    }}>
+                      <div style={{
+                        width: 12, height: 12, borderRadius: '50%',
+                        background: AVATAR_COLOR_HEX[p.avatarColor],
+                      }} />
+                      {p.name}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Timer bar + voted count */}
+      {!data.isReveal && (
+        <div style={{ padding: '0 3rem 2rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 500, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${timerFraction * 100}%`,
+              background: timerColor,
+              borderRadius: 4,
+              transition: 'width 0.1s linear, background 0.3s',
+            }} />
+          </div>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+            {data.votedPlayerIds.length} / {nonHostPlayers.length} voted
+          </p>
+        </div>
+      )}
+
+      {/* Scoreboard */}
+      <div style={{
+        display: 'flex', gap: '0.75rem', justifyContent: 'center',
+        padding: '0 2rem 1.5rem', flexWrap: 'wrap', flexShrink: 0,
+      }}>
+        {[...nonHostPlayers]
+          .sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0))
+          .map((p) => (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.4rem',
+              padding: '0.35rem 0.75rem', borderRadius: '9999px',
+              background: 'rgba(20,20,40,0.6)', border: '1px solid rgba(255,255,255,0.06)',
+              fontSize: '0.8rem',
+            }}>
+              <div style={{
+                width: 12, height: 12, borderRadius: '50%',
+                background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0,
+              }} />
+              <span style={{ fontWeight: 700 }}>{p.name}</span>
+              <span style={{ color: '#a78bfa', fontWeight: 800 }}>{state.scores[p.id] ?? 0}</span>
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -2232,7 +2434,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -2554,7 +2756,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
