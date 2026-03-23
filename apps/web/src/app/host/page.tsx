@@ -202,6 +202,21 @@ interface WouldYouRatherData {
   percentB: number;
 }
 
+// Lucky Number data shape
+interface LuckyNumberData {
+  pickWindowMs: number;
+  pickedPlayerIds: string[];
+  round: number;
+  totalRounds: number;
+  isSpinning: boolean;
+  spinMs: number;
+  winningChoice: string | null;
+  winningNumber: number | null;
+  playerPicks: Record<string, string>;
+  winners: string[];
+  streaks: Record<string, number>;
+}
+
 // Never Have I Ever data shape
 interface NeverHaveIEverData {
   statement: string;
@@ -230,6 +245,7 @@ const GAME_LABELS: Record<string, string> = {
   neverhaveiever: '🙈 Never Have I Ever',
   colorflash: '🔴 Color Flash',
   wouldyourather: '🤔 Would You Rather',
+  luckynumber: '🎰 Lucky Number',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2083,6 +2099,10 @@ function GameView({
     return <WouldYouRatherHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'luckynumber' && gameState) {
+    return <LuckyNumberHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2420,6 +2440,158 @@ function ColorFlashHostView({ state, players }: { state: GameState; players: Pla
   );
 }
 
+// ── Lucky Number Host View ──────────────────────────────────────────────────
+
+const LUCKY_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+const LUCKY_LABELS = ['1', '2', '3', '4'];
+const LUCKY_CHOICE_IDS = ['A', 'B', 'C', 'D'];
+
+function LuckyNumberHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as LuckyNumberData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.pickWindowMs / 8_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>🎰</span>
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {!data.isSpinning ? (
+          <>
+            {/* Pick phase */}
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 900, textAlign: 'center', color: '#f0f0ff' }}>
+              Pick your lucky number!
+            </h2>
+
+            {/* Timer bar */}
+            <div style={{ width: '100%', maxWidth: 500, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`,
+                height: '100%',
+                background: timerColor,
+                borderRadius: 4,
+                transition: 'width 0.3s linear',
+              }} />
+            </div>
+
+            {/* Number choices display */}
+            <div style={{ display: 'flex', gap: '1.5rem' }}>
+              {LUCKY_LABELS.map((label, i) => (
+                <div key={i} style={{
+                  width: 100, height: 100, borderRadius: 16,
+                  background: `${LUCKY_COLORS[i]}22`,
+                  border: `3px solid ${LUCKY_COLORS[i]}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '2.5rem', fontWeight: 900, color: LUCKY_COLORS[i],
+                }}>
+                  {label}
+                </div>
+              ))}
+            </div>
+
+            {/* Who has picked */}
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.map((p) => {
+                const hasPicked = data.pickedPlayerIds.includes(p.id);
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.5rem 1rem', borderRadius: 12,
+                    background: hasPicked ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${hasPicked ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                    display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: hasPicked ? '#22c55e' : '#6b7280' }}>
+                      {p.name}
+                    </span>
+                    {hasPicked && <span style={{ fontSize: '0.75rem' }}>✓</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Spin/reveal phase */}
+            <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#a78bfa', textAlign: 'center' }}>
+              The lucky number is...
+            </h2>
+
+            {/* Winning number - big reveal */}
+            {data.winningNumber !== null && (
+              <div style={{
+                width: 200, height: 200, borderRadius: '50%',
+                background: `${LUCKY_COLORS[data.winningNumber - 1]}22`,
+                border: `6px solid ${LUCKY_COLORS[data.winningNumber - 1]}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '6rem', fontWeight: 900,
+                color: LUCKY_COLORS[data.winningNumber - 1],
+                boxShadow: `0 0 60px ${LUCKY_COLORS[data.winningNumber - 1]}44`,
+                animation: 'pulse 0.6s ease-in-out infinite alternate',
+              }}>
+                {data.winningNumber}
+              </div>
+            )}
+
+            {/* Player picks & results */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.map((p) => {
+                const pick = data.playerPicks[p.id];
+                const isWinner = data.winners.includes(p.id);
+                const pickIdx = pick ? LUCKY_CHOICE_IDS.indexOf(pick) : -1;
+                const streak = data.streaks[p.id] ?? 0;
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.75rem 1.25rem', borderRadius: 16,
+                    background: isWinner ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.08)',
+                    border: `2px solid ${isWinner ? '#22c55e' : 'rgba(239,68,68,0.2)'}`,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem',
+                    minWidth: 100,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <div style={{ width: 14, height: 14, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f0f0ff' }}>{p.name}</span>
+                    </div>
+                    {pick ? (
+                      <span style={{
+                        fontSize: '2rem', fontWeight: 900,
+                        color: pickIdx >= 0 ? LUCKY_COLORS[pickIdx] : '#6b7280',
+                      }}>
+                        {pickIdx >= 0 ? LUCKY_LABELS[pickIdx] : '?'}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '1rem', color: '#6b7280' }}>No pick</span>
+                    )}
+                    {isWinner && (
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#22c55e' }}>
+                        {streak >= 3 ? `🔥 ${streak}x STREAK!` : streak === 2 ? '⚡ 2x STREAK!' : '✅ MATCH!'}
+                      </span>
+                    )}
+                    {!isWinner && pick && (
+                      <span style={{ fontSize: '0.8rem', color: '#ef4444' }}>✗</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -2434,7 +2606,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -2756,7 +2928,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
