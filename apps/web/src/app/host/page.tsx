@@ -168,6 +168,25 @@ interface DirectionDashData {
   totalRounds: number;
 }
 
+// Color Flash data shape
+interface ColorFlashData {
+  flashColor: string | null;
+  flashColorName: string | null;
+  flashIndex: number;
+  flashesTotal: number;
+  round: number;
+  totalRounds: number;
+  playerColors: Record<string, { hex: string; name: string }>;
+  tappedPlayers: string[];
+  isReveal: boolean;
+  revealResults: Array<{
+    playerId: string;
+    correct: number;
+    wrong: number;
+    missed: number;
+  }>;
+}
+
 // Never Have I Ever data shape
 interface NeverHaveIEverData {
   statement: string;
@@ -194,6 +213,7 @@ const GAME_LABELS: Record<string, string> = {
   swipeduel: '👆 Swipe Duel',
   directiondash: '🎯 Direction Dash',
   neverhaveiever: '🙈 Never Have I Ever',
+  colorflash: '🔴 Color Flash',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2039,6 +2059,10 @@ function GameView({
     return <NeverHaveIEverHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'colorflash' && gameState) {
+    return <ColorFlashHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2058,6 +2082,142 @@ function GameView({
   );
 }
 
+// ── Color Flash Host View ───────────────────────────────────────────────────
+
+function ColorFlashHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as ColorFlashData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{
+            height: '100%',
+            width: `${(data.round / data.totalRounds) * 100}%`,
+            background: '#6366f1',
+            borderRadius: 4,
+            transition: 'width 0.3s',
+          }} />
+        </div>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem' }}>
+          Flash {Math.min(data.flashIndex + 1, data.flashesTotal)} / {data.flashesTotal}
+        </span>
+      </div>
+
+      {/* Player color assignments */}
+      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', padding: '0 2rem', flexShrink: 0 }}>
+        {nonHostPlayers.map((p) => {
+          const pc = data.playerColors[p.id];
+          if (!pc) return null;
+          const tapped = data.tappedPlayers.includes(p.id);
+          return (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.5rem 1rem', borderRadius: '9999px',
+              background: tapped ? `${pc.hex}22` : 'rgba(20,20,40,0.6)',
+              border: `2px solid ${tapped ? pc.hex : 'rgba(255,255,255,0.08)'}`,
+              transition: 'all 0.15s',
+            }}>
+              <div style={{
+                width: 16, height: 16, borderRadius: '50%',
+                background: pc.hex, flexShrink: 0,
+                boxShadow: `0 0 8px ${pc.hex}66`,
+              }} />
+              <span style={{ fontWeight: 700, fontSize: '0.875rem' }}>{p.name}</span>
+              <span style={{ color: '#a78bfa', fontWeight: 800, fontSize: '0.8rem' }}>
+                {state.scores[p.id] ?? 0}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Main flash area */}
+      <div style={{
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '2rem',
+      }}>
+        {data.isReveal ? (
+          /* Round results */
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#a78bfa' }}>Round Results</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', maxWidth: 500 }}>
+              {data.revealResults.map((r) => {
+                const player = nonHostPlayers.find((p) => p.id === r.playerId);
+                const pc = data.playerColors[r.playerId];
+                if (!player || !pc) return null;
+                return (
+                  <div key={r.playerId} style={{
+                    display: 'flex', alignItems: 'center', gap: '1rem',
+                    padding: '0.75rem 1.25rem', borderRadius: 12,
+                    background: 'rgba(20,20,40,0.6)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}>
+                    <div style={{
+                      width: 24, height: 24, borderRadius: '50%',
+                      background: pc.hex, flexShrink: 0,
+                    }} />
+                    <span style={{ fontWeight: 700, flex: 1 }}>{player.name}</span>
+                    <span style={{ color: '#22c55e', fontSize: '0.85rem', fontWeight: 700 }}>
+                      {r.correct} hit{r.correct !== 1 ? 's' : ''}
+                    </span>
+                    {r.wrong > 0 && (
+                      <span style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 700 }}>
+                        {r.wrong} wrong
+                      </span>
+                    )}
+                    {r.missed > 0 && (
+                      <span style={{ color: '#f59e0b', fontSize: '0.85rem', fontWeight: 700 }}>
+                        {r.missed} missed
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : data.flashColor ? (
+          /* Active flash */
+          <div style={{
+            width: 280, height: 280, borderRadius: '50%',
+            background: `radial-gradient(circle, ${data.flashColor} 0%, ${data.flashColor}88 60%, transparent 100%)`,
+            boxShadow: `0 0 120px ${data.flashColor}88, 0 0 60px ${data.flashColor}66`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeInScale 0.15s ease-out',
+            transition: 'background 0.1s',
+          }}>
+            <span style={{ fontSize: '2rem', fontWeight: 900, color: '#fff', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+              {data.flashColorName}
+            </span>
+          </div>
+        ) : (
+          /* Gap between flashes */
+          <div style={{
+            width: 280, height: 280, borderRadius: '50%',
+            background: 'rgba(255,255,255,0.03)',
+            border: '2px solid rgba(255,255,255,0.06)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ fontSize: '1.5rem', color: '#374151', fontWeight: 700 }}>...</span>
+          </div>
+        )}
+
+        {!data.isReveal && (
+          <p style={{ color: '#6b7280', fontSize: '1rem', fontWeight: 600 }}>
+            Tap ONLY when your color appears!
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -2072,7 +2232,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -2394,7 +2554,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
