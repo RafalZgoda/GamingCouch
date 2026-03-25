@@ -23,3 +23,4 @@ import '../wouldyourather/WouldYouRatherGame.js';
 import '../luckynumber/LuckyNumberGame.js';
 import '../retropong/RetroPongGame.js';
 import '../emojidecoder/EmojiDecoderGame.js';
+import '../tugofwar/TugOfWarGame.js';

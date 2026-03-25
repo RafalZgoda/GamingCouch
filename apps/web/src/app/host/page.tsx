@@ -202,6 +202,22 @@ interface WouldYouRatherData {
   percentB: number;
 }
 
+// Tug of War data shape
+interface TugOfWarData {
+  ropePosition: number;
+  teamA: string[];
+  teamB: string[];
+  teamATaps: number;
+  teamBTaps: number;
+  timeRemainingMs: number;
+  round: number;
+  totalRounds: number;
+  isReveal: boolean;
+  roundWinner: 'A' | 'B' | 'draw' | null;
+  teamAWins: number;
+  teamBWins: number;
+}
+
 // Emoji Decoder data shape
 interface EmojiDecoderData {
   emojis: string;
@@ -277,6 +293,7 @@ const GAME_LABELS: Record<string, string> = {
   luckynumber: '🎰 Lucky Number',
   retropong: '🏓 Retro Pong',
   emojidecoder: '😎 Emoji Decoder',
+  tugofwar: '🪢 Tug of War',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2142,6 +2159,10 @@ function GameView({
     return <EmojiDecoderHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'tugofwar' && gameState) {
+    return <TugOfWarHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2631,6 +2652,145 @@ function LuckyNumberHostView({ state, players }: { state: GameState; players: Pl
   );
 }
 
+// ── Tug of War Host View ────────────────────────────────────────────────────
+
+function TugOfWarHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as TugOfWarData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.timeRemainingMs / 10_000;
+  const getName = (id: string) => nonHostPlayers.find((p) => p.id === id)?.name ?? '?';
+  const getColor = (id: string) => {
+    const p = nonHostPlayers.find((pl) => pl.id === id);
+    return p ? AVATAR_COLOR_HEX[p.avatarColor] : '#888';
+  };
+
+  // Rope visual: position 0-100 maps to left-right
+  const ropePercent = data.ropePosition;
+  const teamAColor = '#ef4444';
+  const teamBColor = '#3b82f6';
+  const ropeColor = ropePercent < 45 ? teamAColor : ropePercent > 55 ? teamBColor : '#f59e0b';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: teamAColor }}>
+          Team A: {data.teamAWins}
+        </span>
+        <span style={{ color: '#374151' }}>|</span>
+        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: teamBColor }}>
+          Team B: {data.teamBWins}
+        </span>
+        <span style={{ fontSize: '1.5rem' }}>🪢</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Team labels */}
+        <div style={{ display: 'flex', width: '100%', maxWidth: 700, justifyContent: 'space-between' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: teamAColor }}>Team A</div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.5rem' }}>
+              {data.teamA.map((id) => (
+                <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.25rem 0.5rem', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: getColor(id) }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0f0ff' }}>{getName(id)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: teamBColor }}>Team B</div>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '0.5rem' }}>
+              {data.teamB.map((id) => (
+                <div key={id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.25rem 0.5rem', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: getColor(id) }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0f0ff' }}>{getName(id)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Rope visualization */}
+        <div style={{ width: '100%', maxWidth: 700, position: 'relative' }}>
+          {/* Track */}
+          <div style={{
+            width: '100%', height: 16, borderRadius: 8,
+            background: 'rgba(255,255,255,0.06)',
+            position: 'relative', overflow: 'visible',
+          }}>
+            {/* Center mark */}
+            <div style={{ position: 'absolute', left: '50%', top: -8, bottom: -8, width: 2, background: 'rgba(255,255,255,0.2)' }} />
+            {/* Win zones */}
+            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '20%', background: `${teamAColor}22`, borderRadius: '8px 0 0 8px' }} />
+            <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '20%', background: `${teamBColor}22`, borderRadius: '0 8px 8px 0' }} />
+            {/* Rope knot */}
+            <div style={{
+              position: 'absolute',
+              left: `${ropePercent}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: 40, height: 40, borderRadius: '50%',
+              background: ropeColor,
+              boxShadow: `0 0 20px ${ropeColor}66`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.2rem', fontWeight: 900, color: '#fff',
+              transition: 'left 0.1s linear',
+            }}>
+              🪢
+            </div>
+          </div>
+
+          {/* Tap counts */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+            <span style={{ fontSize: '2rem', fontWeight: 900, color: teamAColor }}>{data.teamATaps}</span>
+            <span style={{ fontSize: '0.85rem', color: '#6b7280', alignSelf: 'center' }}>taps</span>
+            <span style={{ fontSize: '2rem', fontWeight: 900, color: teamBColor }}>{data.teamBTaps}</span>
+          </div>
+        </div>
+
+        {/* Timer */}
+        {!data.isReveal && (
+          <div style={{ width: '100%', maxWidth: 500, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              width: `${timerFraction * 100}%`,
+              height: '100%',
+              background: timerFraction > 0.3 ? '#22c55e' : '#ef4444',
+              borderRadius: 3,
+              transition: 'width 0.3s linear',
+            }} />
+          </div>
+        )}
+
+        {/* Round result */}
+        {data.isReveal && data.roundWinner && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: '2.5rem', fontWeight: 900,
+              color: data.roundWinner === 'A' ? teamAColor : data.roundWinner === 'B' ? teamBColor : '#f59e0b',
+            }}>
+              {data.roundWinner === 'draw' ? 'Draw!' : `Team ${data.roundWinner} wins!`}
+            </div>
+          </div>
+        )}
+
+        {!data.isReveal && (
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#a78bfa', textAlign: 'center' }}>
+            TAP TAP TAP!
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Emoji Decoder Host View ─────────────────────────────────────────────────
 
 function EmojiDecoderHostView({ state, players }: { state: GameState; players: Player[] }) {
@@ -2931,7 +3091,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -3253,7 +3413,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
