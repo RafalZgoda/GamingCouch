@@ -202,6 +202,23 @@ interface WouldYouRatherData {
   percentB: number;
 }
 
+// Retro Pong data shape
+interface RetroPongData {
+  arena: number;
+  ball: { x: number; y: number; radius: number } | null;
+  paddles: Record<string, { side: number; pos: number; length: number; offset: number; thickness: number; eliminated: boolean }>;
+  roundScoresNeeded: number;
+  roundPoints: Record<string, number>;
+  round: number;
+  totalRounds: number;
+  isServing: boolean;
+  serveMs: number;
+  isRoundEnd: boolean;
+  roundEndMs: number;
+  lastScorer: string | null;
+  eliminatedThisRound: string[];
+}
+
 // Lucky Number data shape
 interface LuckyNumberData {
   pickWindowMs: number;
@@ -246,6 +263,7 @@ const GAME_LABELS: Record<string, string> = {
   colorflash: '🔴 Color Flash',
   wouldyourather: '🤔 Would You Rather',
   luckynumber: '🎰 Lucky Number',
+  retropong: '🏓 Retro Pong',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2103,6 +2121,10 @@ function GameView({
     return <LuckyNumberHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'retropong' && gameState) {
+    return <RetroPongHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2592,6 +2614,167 @@ function LuckyNumberHostView({ state, players }: { state: GameState; players: Pl
   );
 }
 
+// ── Retro Pong Host View ───────────────────────────────────────────────────
+
+const SIDE_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b']; // left, right, top, bottom
+const SIDE_NAMES = ['Left', 'Right', 'Top', 'Bottom'];
+
+function RetroPongHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as RetroPongData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const arenaSize = 500; // px
+  const scale = arenaSize / data.arena;
+
+  const getName = (id: string) => nonHostPlayers.find((p) => p.id === id)?.name ?? '?';
+  const getColor = (id: string) => {
+    const p = nonHostPlayers.find((pl) => pl.id === id);
+    return p ? AVATAR_COLOR_HEX[p.avatarColor] : '#888';
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff', alignItems: 'center' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem 2rem', flexShrink: 0, width: '100%' }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        {/* Round points */}
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {Object.entries(data.paddles).map(([id, paddle]) => (
+            <span key={id} style={{ fontSize: '0.85rem', fontWeight: 700, color: SIDE_COLORS[paddle.side] }}>
+              {getName(id)}: {data.roundPoints[id] ?? 0}/{data.roundScoresNeeded}
+            </span>
+          ))}
+        </div>
+        <span style={{ fontSize: '1.5rem' }}>🏓</span>
+      </div>
+
+      {/* Arena */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{
+          position: 'relative',
+          width: arenaSize,
+          height: arenaSize,
+          background: '#111122',
+          border: '2px solid rgba(255,255,255,0.1)',
+          borderRadius: 4,
+          overflow: 'hidden',
+        }}>
+          {/* Center line */}
+          <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: 1, background: 'rgba(255,255,255,0.06)' }} />
+          <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+          {/* Paddles */}
+          {Object.entries(data.paddles).map(([id, paddle]) => {
+            const color = getColor(id);
+            const len = paddle.length * scale;
+            const thick = paddle.thickness * scale;
+            const offset = paddle.offset * scale;
+            const pos = paddle.pos * scale;
+
+            let style: React.CSSProperties;
+            if (paddle.side === 0) { // left
+              style = { left: offset, top: pos - len / 2, width: thick, height: len };
+            } else if (paddle.side === 1) { // right
+              style = { right: offset, top: pos - len / 2, width: thick, height: len };
+            } else if (paddle.side === 2) { // top
+              style = { top: offset, left: pos - len / 2, height: thick, width: len };
+            } else { // bottom
+              style = { bottom: offset, left: pos - len / 2, height: thick, width: len };
+            }
+
+            return (
+              <div key={id} style={{
+                position: 'absolute',
+                ...style,
+                background: paddle.eliminated ? '#374151' : color,
+                borderRadius: 2,
+                transition: 'top 0.05s linear, left 0.05s linear',
+                boxShadow: paddle.eliminated ? 'none' : `0 0 10px ${color}66`,
+              }} />
+            );
+          })}
+
+          {/* Ball */}
+          {data.ball && (
+            <div style={{
+              position: 'absolute',
+              left: data.ball.x * scale - data.ball.radius * scale,
+              top: data.ball.y * scale - data.ball.radius * scale,
+              width: data.ball.radius * 2 * scale,
+              height: data.ball.radius * 2 * scale,
+              borderRadius: '50%',
+              background: '#f0f0ff',
+              boxShadow: '0 0 12px rgba(240,240,255,0.6)',
+            }} />
+          )}
+
+          {/* Serve countdown */}
+          {data.isServing && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.3)',
+            }}>
+              <span style={{ fontSize: '3rem', fontWeight: 900, color: '#a78bfa' }}>
+                {Math.ceil(data.serveMs / 1000)}
+              </span>
+            </div>
+          )}
+
+          {/* Round end overlay */}
+          {data.isRoundEnd && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.5)',
+              gap: '1rem',
+            }}>
+              <span style={{ fontSize: '2rem', fontWeight: 900, color: '#22c55e' }}>Round Over!</span>
+              <div style={{ display: 'flex', gap: '1.5rem' }}>
+                {Object.entries(data.roundPoints)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([id, pts]) => (
+                    <div key={id} style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 800, color: getColor(id) }}>{pts}</div>
+                      <div style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{getName(id)}</div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Player labels on sides */}
+          {Object.entries(data.paddles).map(([id, paddle]) => {
+            const name = getName(id);
+            let labelStyle: React.CSSProperties;
+            if (paddle.side === 0) labelStyle = { left: 8, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center' };
+            else if (paddle.side === 1) labelStyle = { right: 8, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center' };
+            else if (paddle.side === 2) labelStyle = { top: 8, left: '50%', transform: 'translateX(-50%)' };
+            else labelStyle = { bottom: 8, left: '50%', transform: 'translateX(-50%)' };
+
+            return (
+              <span key={`label-${id}`} style={{
+                position: 'absolute',
+                ...labelStyle,
+                fontSize: '0.7rem',
+                fontWeight: 700,
+                color: SIDE_COLORS[paddle.side],
+                opacity: 0.6,
+                whiteSpace: 'nowrap',
+              }}>
+                {name}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -2606,7 +2789,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -2928,7 +3111,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}

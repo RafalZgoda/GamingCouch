@@ -21,3 +21,4 @@ import '../neverhaveiever/NeverHaveIEverGame.js';
 import '../colorflash/ColorFlashGame.js';
 import '../wouldyourather/WouldYouRatherGame.js';
 import '../luckynumber/LuckyNumberGame.js';
+import '../retropong/RetroPongGame.js';
