@@ -202,6 +202,18 @@ interface WouldYouRatherData {
   percentB: number;
 }
 
+// Emoji Decoder data shape
+interface EmojiDecoderData {
+  emojis: string;
+  options: string[];
+  round: number;
+  totalRounds: number;
+  timeRemainingMs: number;
+  answeredPlayerIds: string[];
+  correctAnswer?: number;
+  playerAnswers?: Record<string, number>;
+}
+
 // Retro Pong data shape
 interface RetroPongData {
   arena: number;
@@ -264,6 +276,7 @@ const GAME_LABELS: Record<string, string> = {
   wouldyourather: '🤔 Would You Rather',
   luckynumber: '🎰 Lucky Number',
   retropong: '🏓 Retro Pong',
+  emojidecoder: '😎 Emoji Decoder',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2125,6 +2138,10 @@ function GameView({
     return <RetroPongHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'emojidecoder' && gameState) {
+    return <EmojiDecoderHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2614,6 +2631,131 @@ function LuckyNumberHostView({ state, players }: { state: GameState; players: Pl
   );
 }
 
+// ── Emoji Decoder Host View ─────────────────────────────────────────────────
+
+function EmojiDecoderHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as EmojiDecoderData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.timeRemainingMs / 12_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+  const isReveal = data.correctAnswer !== undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>😎</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Emoji display */}
+        <div style={{
+          fontSize: '6rem',
+          lineHeight: 1.2,
+          textAlign: 'center',
+          padding: '1rem',
+          filter: isReveal ? 'none' : 'drop-shadow(0 0 20px rgba(255,255,255,0.2))',
+        }}>
+          {data.emojis}
+        </div>
+
+        {!isReveal && (
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#a78bfa', textAlign: 'center' }}>
+            What does this mean?
+          </h2>
+        )}
+
+        {/* Timer */}
+        {!isReveal && (
+          <div style={{ width: '100%', maxWidth: 500, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{
+              width: `${timerFraction * 100}%`,
+              height: '100%',
+              background: timerColor,
+              borderRadius: 4,
+              transition: 'width 0.3s linear',
+            }} />
+          </div>
+        )}
+
+        {/* Answer options */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 600 }}>
+          {data.options.map((opt, i) => {
+            const optColors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+            const labels = ['A', 'B', 'C', 'D'];
+            const isCorrect = isReveal && i === data.correctAnswer;
+            const bg = isReveal
+              ? isCorrect ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.03)'
+              : `${optColors[i]}15`;
+            const border = isReveal
+              ? isCorrect ? '#22c55e' : 'rgba(255,255,255,0.06)'
+              : `${optColors[i]}44`;
+
+            return (
+              <div key={i} style={{
+                padding: '1rem 1.25rem',
+                borderRadius: 12,
+                background: bg,
+                border: `2px solid ${border}`,
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+              }}>
+                <span style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: optColors[i],
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: '0.85rem', color: '#fff', flexShrink: 0,
+                }}>
+                  {labels[i]}
+                </span>
+                <span style={{
+                  fontWeight: 700, fontSize: '1rem',
+                  color: isCorrect ? '#22c55e' : '#f0f0ff',
+                }}>
+                  {opt}
+                </span>
+                {isReveal && isCorrect && <span style={{ marginLeft: 'auto', fontSize: '1.2rem' }}>✅</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Player answer status */}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {nonHostPlayers.map((p) => {
+            const answered = data.answeredPlayerIds.includes(p.id);
+            const playerAnswer = data.playerAnswers?.[p.id];
+            const gotItRight = isReveal && playerAnswer === data.correctAnswer;
+            return (
+              <div key={p.id} style={{
+                padding: '0.4rem 0.8rem', borderRadius: 10,
+                background: isReveal
+                  ? gotItRight ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.08)'
+                  : answered ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isReveal ? (gotItRight ? '#22c55e33' : '#ef444433') : answered ? '#7c3aed33' : 'rgba(255,255,255,0.06)'}`,
+                display: 'flex', alignItems: 'center', gap: '0.4rem',
+              }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: answered ? '#f0f0ff' : '#6b7280' }}>
+                  {p.name}
+                </span>
+                {isReveal && gotItRight && <span style={{ fontSize: '0.7rem' }}>✅</span>}
+                {isReveal && !gotItRight && answered && <span style={{ fontSize: '0.7rem' }}>❌</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Retro Pong Host View ───────────────────────────────────────────────────
 
 const SIDE_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b']; // left, right, top, bottom
@@ -2789,7 +2931,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -3111,7 +3253,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
