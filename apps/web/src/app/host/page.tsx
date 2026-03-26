@@ -449,6 +449,24 @@ interface PriceIsRightData {
   playerGuesses: Record<string, number>;
 }
 
+// Spin the Wheel data shape
+interface SpinTheWheelData {
+  round: number;
+  totalRounds: number;
+  phase: 'spinning' | 'challenge' | 'voting' | 'reveal';
+  spinMs: number;
+  challengeMs: number;
+  voteMs: number;
+  targetPlayerId: string | null;
+  challenge: string | null;
+  challengeType: string | null;
+  votedPlayerIds: string[];
+  yesVotes: number;
+  noVotes: number;
+  passed: boolean;
+  votes: Record<string, boolean>;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -480,6 +498,7 @@ const GAME_LABELS: Record<string, string> = {
   buttonmash: '🏃 Button Mash Race',
   dodgeball: '🏐 Dodge Ball',
   priceisright: '💰 Price is Right',
+  spinthewheel: '🎡 Spin the Wheel',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2393,6 +2412,10 @@ function GameView({
     return <PriceIsRightHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'spinthewheel' && gameState) {
+    return <SpinTheWheelHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3011,6 +3034,144 @@ function AuctionHouseHostView({ state, players }: { state: GameState; players: P
                 No unique bids — nobody wins!
               </p>
             )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Spin the Wheel Host View ─────────────────────────────────────────────────
+
+const CHALLENGE_TYPE_EMOJI: Record<string, string> = { truth: '🤔', dare: '😈', category: '📋', trivia: '🧠' };
+const CHALLENGE_TYPE_COLOR: Record<string, string> = { truth: '#3b82f6', dare: '#ef4444', category: '#22c55e', trivia: '#f59e0b' };
+
+function SpinTheWheelHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as SpinTheWheelData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const targetPlayer = nonHostPlayers.find((p) => p.id === data.targetPlayerId);
+  const timerFraction = data.phase === 'challenge' ? data.challengeMs / 15_000 : data.voteMs / 8_000;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>🎡</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Spinning */}
+        {data.phase === 'spinning' && (
+          <>
+            <div style={{ fontSize: '5rem', animation: 'spin 1s linear infinite' }}>🎡</div>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#a78bfa' }}>Spinning...</p>
+          </>
+        )}
+
+        {/* Challenge phase */}
+        {data.phase === 'challenge' && targetPlayer && (
+          <>
+            {/* Target player */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[targetPlayer.avatarColor] }} />
+              <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f0f0ff' }}>{targetPlayer.name}</span>
+            </div>
+
+            {/* Challenge card */}
+            <div style={{
+              padding: '2rem 3rem', borderRadius: 20, maxWidth: 500, textAlign: 'center',
+              background: `${CHALLENGE_TYPE_COLOR[data.challengeType ?? 'truth']}10`,
+              border: `2px solid ${CHALLENGE_TYPE_COLOR[data.challengeType ?? 'truth']}40`,
+            }}>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>
+                {CHALLENGE_TYPE_EMOJI[data.challengeType ?? 'truth']} {data.challengeType}
+              </p>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#f0f0ff', margin: '0.5rem 0' }}>
+                {data.challenge}
+              </h2>
+            </div>
+
+            {/* Timer */}
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.3 ? '#22c55e' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+              Others will vote if you did it!
+            </p>
+          </>
+        )}
+
+        {/* Voting phase */}
+        {data.phase === 'voting' && targetPlayer && (
+          <>
+            <p style={{ fontSize: '1rem', color: '#6b7280' }}>Did {targetPlayer.name} do it?</p>
+            <div style={{ display: 'flex', gap: '2rem' }}>
+              <div style={{ padding: '1rem 2rem', borderRadius: 16, background: 'rgba(34,197,94,0.1)', border: '2px solid #22c55e44', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>✅</span>
+                <p style={{ fontWeight: 700, color: '#22c55e', margin: '0.25rem 0 0' }}>YES</p>
+              </div>
+              <div style={{ padding: '1rem 2rem', borderRadius: 16, background: 'rgba(239,68,68,0.1)', border: '2px solid #ef444444', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>❌</span>
+                <p style={{ fontWeight: 700, color: '#ef4444', margin: '0.25rem 0 0' }}>NO</p>
+              </div>
+            </div>
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.3 ? '#22c55e' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+              {data.votedPlayerIds.length} voted
+            </p>
+          </>
+        )}
+
+        {/* Reveal phase */}
+        {data.phase === 'reveal' && targetPlayer && (
+          <>
+            <div style={{
+              padding: '1.5rem 3rem', borderRadius: 20, textAlign: 'center',
+              background: data.passed ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+              border: `2px solid ${data.passed ? '#22c55e' : '#ef4444'}`,
+            }}>
+              <span style={{ fontSize: '3rem' }}>{data.passed ? '✅' : '❌'}</span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: data.passed ? '#22c55e' : '#ef4444' }}>
+                {data.passed ? `${targetPlayer.name} did it!` : `${targetPlayer.name} failed!`}
+              </h2>
+              <p style={{ fontSize: '1rem', color: '#9ca3af' }}>
+                Yes: {data.yesVotes} — No: {data.noVotes}
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.filter((p) => p.id !== data.targetPlayerId).map((p) => {
+                const vote = data.votes[p.id];
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.3rem 0.6rem', borderRadius: 10,
+                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                    <span style={{ fontSize: '0.8rem' }}>{vote === true ? '✅' : vote === false ? '❌' : '🤷'}</span>
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
@@ -4559,7 +4720,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -4881,7 +5042,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
