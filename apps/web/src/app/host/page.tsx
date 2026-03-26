@@ -414,6 +414,24 @@ interface ButtonMashData {
   finishedPlayers: string[];
 }
 
+// Dodge Ball data shape
+interface DodgeBallData {
+  round: number;
+  totalRounds: number;
+  hazardDirection: 'up' | 'down' | 'left' | 'right' | null;
+  isWarning: boolean;
+  warnMs: number;
+  reactMs: number;
+  maxReactMs: number;
+  isReveal: boolean;
+  playerDodges: Record<string, 'up' | 'down' | 'left' | 'right'>;
+  dodgedPlayerIds: string[];
+  survivors: string[];
+  hitPlayers: string[];
+  lives: Record<string, number>;
+  eliminatedPlayers: string[];
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -443,6 +461,7 @@ const GAME_LABELS: Record<string, string> = {
   whackamole: '🔨 Whack-a-Mole',
   floorislava: '🌋 Floor is Lava',
   buttonmash: '🏃 Button Mash Race',
+  dodgeball: '🏐 Dodge Ball',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2348,6 +2367,10 @@ function GameView({
     return <ButtonMashHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'dodgeball' && gameState) {
+    return <DodgeBallHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2966,6 +2989,112 @@ function AuctionHouseHostView({ state, players }: { state: GameState; players: P
                 No unique bids — nobody wins!
               </p>
             )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Dodge Ball Host View ─────────────────────────────────────────────────────
+
+const DIR_EMOJI_MAP: Record<string, string> = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
+const DIR_OPPOSITE: Record<string, string> = { up: 'down', down: 'up', left: 'right', right: 'left' };
+
+function DodgeBallHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as DodgeBallData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.reactMs / data.maxReactMs;
+  const safeDir = data.hazardDirection ? DIR_OPPOSITE[data.hazardDirection] : null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>🏐</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Warning phase — show incoming hazard */}
+        {data.isWarning && data.hazardDirection && (
+          <>
+            <p style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 600 }}>INCOMING FROM</p>
+            <div style={{
+              fontSize: '5rem',
+              animation: 'pulse 0.4s infinite',
+            }}>
+              {DIR_EMOJI_MAP[data.hazardDirection]}
+            </div>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase' }}>
+              {data.hazardDirection}!
+            </p>
+            <p style={{ fontSize: '1rem', color: '#f59e0b' }}>Get ready to dodge!</p>
+          </>
+        )}
+
+        {/* React phase */}
+        {!data.isWarning && !data.isReveal && (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#22c55e' }}>DODGE NOW!</p>
+
+            <div style={{ width: '100%', maxWidth: 400, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.3 ? '#22c55e' : '#ef4444',
+                borderRadius: 4, transition: 'width 0.3s linear',
+              }} />
+            </div>
+
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+              {data.dodgedPlayerIds.length} dodged
+            </p>
+          </>
+        )}
+
+        {/* Reveal phase */}
+        {data.isReveal && (
+          <>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '0.8rem', color: '#6b7280' }}>Safe direction was</p>
+              <span style={{ fontSize: '3rem' }}>{safeDir ? DIR_EMOJI_MAP[safeDir] : '?'}</span>
+              <p style={{ fontSize: '1.2rem', fontWeight: 800, color: '#22c55e', textTransform: 'uppercase' }}>{safeDir}</p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.map((p) => {
+                const dodge = data.playerDodges[p.id];
+                const survived = data.survivors.includes(p.id);
+                const eliminated = data.eliminatedPlayers.includes(p.id);
+                const lives = data.lives[p.id] ?? 0;
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.5rem 1rem', borderRadius: 14,
+                    background: eliminated ? 'rgba(100,100,100,0.1)' : survived ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)',
+                    border: `2px solid ${eliminated ? '#555' : survived ? '#22c55e' : '#ef4444'}`,
+                    textAlign: 'center', minWidth: 75, opacity: eliminated ? 0.5 : 1,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', justifyContent: 'center', marginBottom: '0.2rem' }}>
+                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                    </div>
+                    {dodge && <span style={{ fontSize: '1.2rem' }}>{DIR_EMOJI_MAP[dodge]}</span>}
+                    <p style={{ fontSize: '0.65rem', fontWeight: 700, color: survived ? '#22c55e' : '#ef4444', margin: '0.1rem 0 0' }}>
+                      {eliminated ? 'OUT' : survived ? 'SAFE' : 'HIT'}
+                    </p>
+                    <p style={{ fontSize: '0.6rem', color: '#6b7280', margin: 0 }}>
+                      {'❤️'.repeat(lives)}{'🖤'.repeat(Math.max(0, 3 - lives))}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
@@ -4284,7 +4413,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -4606,7 +4735,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
