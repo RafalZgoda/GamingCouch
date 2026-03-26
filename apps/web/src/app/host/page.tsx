@@ -352,6 +352,21 @@ interface RPSData {
   results: Record<string, { wins: number; losses: number; draws: number }>;
 }
 
+// Bomb Defuse data shape
+interface BombDefuseData {
+  round: number;
+  totalRounds: number;
+  pickWindowMs: number;
+  maxPickMs: number;
+  cutPlayerIds: string[];
+  isReveal: boolean;
+  correctWire: 'red' | 'blue' | 'green' | 'yellow' | null;
+  playerCuts: Record<string, 'red' | 'blue' | 'green' | 'yellow'>;
+  survivors: string[];
+  exploded: string[];
+  streaks: Record<string, number>;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -377,6 +392,7 @@ const GAME_LABELS: Record<string, string> = {
   categorysprint: '📋 Category Sprint',
   auctionhouse: '🔨 Auction House',
   rps: '✊ Rock Paper Scissors',
+  bombdefuse: '💣 Bomb Defuse',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2266,6 +2282,10 @@ function GameView({
     return <RPSHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'bombdefuse' && gameState) {
+    return <BombDefuseHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2884,6 +2904,130 @@ function AuctionHouseHostView({ state, players }: { state: GameState; players: P
                 No unique bids — nobody wins!
               </p>
             )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Bomb Defuse Host View ────────────────────────────────────────────────────
+
+const WIRE_HEX: Record<string, string> = { red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#eab308' };
+const WIRE_EMOJI: Record<string, string> = { red: '🔴', blue: '🔵', green: '🟢', yellow: '🟡' };
+
+function BombDefuseHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as BombDefuseData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.pickWindowMs / data.maxPickMs;
+  const isUrgent = timerFraction < 0.3;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>💣</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {!data.isReveal ? (
+          <>
+            {/* Bomb */}
+            <div style={{
+              fontSize: isUrgent ? '6rem' : '5rem',
+              transition: 'font-size 0.3s',
+              animation: isUrgent ? 'pulse 0.5s infinite' : undefined,
+            }}>
+              💣
+            </div>
+
+            <p style={{ color: '#ef4444', fontSize: '1.5rem', fontWeight: 800 }}>
+              CUT A WIRE!
+            </p>
+
+            {/* Wire options */}
+            <div style={{ display: 'flex', gap: '1.5rem' }}>
+              {(['red', 'blue', 'green', 'yellow'] as const).map((w) => (
+                <div key={w} style={{
+                  padding: '0.75rem 1.5rem', borderRadius: 12,
+                  background: `${WIRE_HEX[w]}15`, border: `2px solid ${WIRE_HEX[w]}44`,
+                  textAlign: 'center',
+                }}>
+                  <span style={{ fontSize: '2rem' }}>{WIRE_EMOJI[w]}</span>
+                  <p style={{ fontSize: '0.8rem', fontWeight: 700, color: WIRE_HEX[w], textTransform: 'capitalize', margin: '0.25rem 0 0' }}>{w}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Timer */}
+            <div style={{ width: '100%', maxWidth: 400, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: isUrgent ? '#ef4444' : '#22c55e',
+                borderRadius: 4, transition: 'width 0.3s linear',
+              }} />
+            </div>
+
+            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+              {data.cutPlayerIds.length} / {nonHostPlayers.length} cut a wire
+            </p>
+          </>
+        ) : (
+          <>
+            {/* Reveal */}
+            <p style={{ fontSize: '1rem', color: '#6b7280', fontWeight: 600 }}>THE SAFE WIRE WAS</p>
+            <div style={{
+              padding: '1rem 3rem', borderRadius: 16,
+              background: data.correctWire ? `${WIRE_HEX[data.correctWire]}20` : 'transparent',
+              border: `3px solid ${data.correctWire ? WIRE_HEX[data.correctWire] : '#888'}`,
+            }}>
+              <span style={{ fontSize: '3rem' }}>{data.correctWire ? WIRE_EMOJI[data.correctWire] : '?'}</span>
+              <p style={{ fontSize: '1.2rem', fontWeight: 900, color: data.correctWire ? WIRE_HEX[data.correctWire] : '#888', textTransform: 'capitalize', textAlign: 'center', margin: '0.25rem 0 0' }}>
+                {data.correctWire}
+              </p>
+            </div>
+
+            {/* Player results */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.map((p) => {
+                const cut = data.playerCuts[p.id];
+                const survived = data.survivors.includes(p.id);
+                const streak = data.streaks[p.id] ?? 0;
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.75rem 1.25rem', borderRadius: 16,
+                    background: survived ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.1)',
+                    border: `2px solid ${survived ? '#22c55e' : '#ef4444'}`,
+                    textAlign: 'center', minWidth: 90,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', marginBottom: '0.3rem' }}>
+                      <div style={{ width: 12, height: 12, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                    </div>
+                    {cut ? (
+                      <span style={{ fontSize: '1.5rem' }}>{WIRE_EMOJI[cut]}</span>
+                    ) : (
+                      <span style={{ fontSize: '1rem', color: '#6b7280' }}>No cut</span>
+                    )}
+                    <p style={{ fontSize: '0.75rem', fontWeight: 800, color: survived ? '#22c55e' : '#ef4444', margin: '0.2rem 0 0' }}>
+                      {survived ? 'SAFE!' : 'BOOM!'}
+                    </p>
+                    {streak >= 3 && survived && (
+                      <p style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 700, margin: 0 }}>
+                        {streak} streak!
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
@@ -3787,7 +3931,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -4109,7 +4253,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
