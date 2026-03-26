@@ -41,3 +41,4 @@ import '../factorcap/FactOrCapGame.js';
 import '../matchmadness/MatchMadnessGame.js';
 import '../hotseat/HotSeatGame.js';
 import '../spotthediff/SpotTheDiffGame.js';
+import '../mimetime/MimeTimeGame.js';
