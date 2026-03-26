@@ -202,6 +202,23 @@ interface WouldYouRatherData {
   percentB: number;
 }
 
+// Simon Says data shape
+interface SimonSaysData {
+  sequenceLength: number;
+  maxSequence: number;
+  showPhase: boolean;
+  highlightIndex: number;
+  highlightButton: string | null;
+  inputPhase: boolean;
+  inputTimeMs: number;
+  playerProgress: Record<string, number>;
+  alivePlayers: string[];
+  eliminatedPlayers: string[];
+  isReveal: boolean;
+  revealMs: number;
+  roundSurvivors: string[];
+}
+
 // Tug of War data shape
 interface TugOfWarData {
   ropePosition: number;
@@ -294,6 +311,7 @@ const GAME_LABELS: Record<string, string> = {
   retropong: '🏓 Retro Pong',
   emojidecoder: '😎 Emoji Decoder',
   tugofwar: '🪢 Tug of War',
+  simonsays: '🧠 Simon Says',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2163,6 +2181,10 @@ function GameView({
     return <TugOfWarHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'simonsays' && gameState) {
+    return <SimonSaysHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2652,6 +2674,125 @@ function LuckyNumberHostView({ state, players }: { state: GameState; players: Pl
   );
 }
 
+// ── Simon Says Host View ────────────────────────────────────────────────────
+
+const SIMON_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+const SIMON_LABELS = ['Red', 'Blue', 'Green', 'Yellow'];
+const SIMON_IDS = ['A', 'B', 'C', 'D'];
+
+function SimonSaysHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as SimonSaysData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const getName = (id: string) => nonHostPlayers.find((p) => p.id === id)?.name ?? '?';
+  const getColor = (id: string) => {
+    const p = nonHostPlayers.find((pl) => pl.id === id);
+    return p ? AVATAR_COLOR_HEX[p.avatarColor] : '#888';
+  };
+
+  const highlightIdx = data.highlightButton ? SIMON_IDS.indexOf(data.highlightButton) : -1;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Sequence: {data.sequenceLength} / {data.maxSequence}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '0.85rem', color: '#22c55e', fontWeight: 600 }}>
+          {data.alivePlayers.length} alive
+        </span>
+        <span style={{ fontSize: '1.5rem' }}>🧠</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Phase label */}
+        {data.showPhase && (
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#a78bfa' }}>Watch the sequence...</h2>
+        )}
+        {data.inputPhase && (
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f59e0b' }}>Your turn! Repeat it!</h2>
+        )}
+        {data.isReveal && (
+          <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#22c55e' }}>
+            {data.roundSurvivors.length > 0 ? 'Round complete!' : 'Everyone eliminated!'}
+          </h2>
+        )}
+
+        {/* Color buttons grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          {SIMON_IDS.map((id, i) => {
+            const isHighlighted = data.showPhase && highlightIdx === i;
+            return (
+              <div key={id} style={{
+                width: 120, height: 120, borderRadius: 20,
+                background: isHighlighted ? SIMON_COLORS[i] : `${SIMON_COLORS[i]}33`,
+                border: `3px solid ${SIMON_COLORS[i]}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background 0.15s ease',
+                boxShadow: isHighlighted ? `0 0 40px ${SIMON_COLORS[i]}88` : 'none',
+              }}>
+                <span style={{
+                  fontSize: '1.2rem', fontWeight: 800,
+                  color: isHighlighted ? '#fff' : SIMON_COLORS[i],
+                  opacity: isHighlighted ? 1 : 0.6,
+                }}>
+                  {SIMON_LABELS[i]}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Input timer */}
+        {data.inputPhase && (
+          <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              width: `${(data.inputTimeMs / 3000) * 100}%`,
+              height: '100%',
+              background: data.inputTimeMs > 1500 ? '#22c55e' : '#ef4444',
+              borderRadius: 3,
+              transition: 'width 0.2s linear',
+            }} />
+          </div>
+        )}
+
+        {/* Players status */}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {nonHostPlayers.map((p) => {
+            const alive = data.alivePlayers.includes(p.id);
+            const eliminated = data.eliminatedPlayers.includes(p.id);
+            const progress = data.playerProgress[p.id] ?? 0;
+            const survived = data.isReveal && data.roundSurvivors.includes(p.id);
+            return (
+              <div key={p.id} style={{
+                padding: '0.5rem 0.8rem', borderRadius: 12,
+                background: eliminated ? 'rgba(239,68,68,0.08)' : survived ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${eliminated ? '#ef444433' : survived ? '#22c55e33' : 'rgba(255,255,255,0.06)'}`,
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                opacity: eliminated ? 0.5 : 1,
+              }}>
+                <div style={{ width: 12, height: 12, borderRadius: '50%', background: getColor(p.id) }} />
+                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f0f0ff' }}>{getName(p.id)}</span>
+                {data.inputPhase && alive && (
+                  <span style={{ fontSize: '0.7rem', color: '#a78bfa', fontWeight: 700 }}>
+                    {progress}/{data.sequenceLength}
+                  </span>
+                )}
+                {eliminated && <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>OUT</span>}
+                {survived && <span style={{ fontSize: '0.7rem' }}>✅</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Tug of War Host View ────────────────────────────────────────────────────
 
 function TugOfWarHostView({ state, players }: { state: GameState; players: Player[] }) {
@@ -3091,7 +3232,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -3413,7 +3554,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
