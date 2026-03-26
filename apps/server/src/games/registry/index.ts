@@ -26,3 +26,4 @@ import '../emojidecoder/EmojiDecoderGame.js';
 import '../tugofwar/TugOfWarGame.js';
 import '../simonsays/SimonSaysGame.js';
 import '../debateclub/DebateClubGame.js';
+import '../categorysprint/CategorySprintGame.js';
