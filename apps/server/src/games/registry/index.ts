@@ -38,3 +38,4 @@ import '../priceisright/PriceIsRightGame.js';
 import '../spinthewheel/SpinTheWheelGame.js';
 import '../copycatchain/CopycatChainGame.js';
 import '../factorcap/FactOrCapGame.js';
+import '../matchmadness/MatchMadnessGame.js';

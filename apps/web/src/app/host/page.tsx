@@ -502,6 +502,21 @@ interface FactOrCapData {
   fooledPlayerIds: string[];
 }
 
+// Match Madness data shape
+interface MatchMadnessData {
+  round: number;
+  totalRounds: number;
+  phase: 'flash' | 'input' | 'reveal';
+  grid: Record<'A' | 'B' | 'C' | 'D', string | null>;
+  flashMs: number;
+  inputMs: number;
+  playerFirstPick: Record<string, 'A' | 'B' | 'C' | 'D'>;
+  playerSecondPick: Record<string, 'A' | 'B' | 'C' | 'D'>;
+  matchedPlayers: string[];
+  failedPlayers: string[];
+  pairSymbol: string | null;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -536,6 +551,7 @@ const GAME_LABELS: Record<string, string> = {
   spinthewheel: '🎡 Spin the Wheel',
   copycatchain: '🔗 Copycat Chain',
   factorcap: '🧢 Fact or Cap',
+  matchmadness: '🃏 Match Madness',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2461,6 +2477,10 @@ function GameView({
     return <FactOrCapHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'matchmadness' && gameState) {
+    return <MatchMadnessHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3219,6 +3239,125 @@ function SpinTheWheelHostView({ state, players }: { state: GameState; players: P
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Match Madness Host View ──────────────────────────────────────────────────
+
+const MM_POS_LABELS: Record<string, string> = { A: 'Top-Left', B: 'Top-Right', C: 'Bottom-Left', D: 'Bottom-Right' };
+const MM_POS_COLORS: Record<string, string> = { A: '#ef4444', B: '#3b82f6', C: '#22c55e', D: '#f59e0b' };
+
+function MatchMadnessHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as MatchMadnessData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        {data.phase === 'flash' && (
+          <span style={{ color: '#f59e0b', fontSize: '0.9rem', fontWeight: 700 }}>MEMORIZE!</span>
+        )}
+        {data.phase === 'input' && (
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: data.inputMs > 3000 ? '#22c55e' : '#ef4444' }}>
+            {Math.ceil(data.inputMs / 1000)}s
+          </span>
+        )}
+        <span style={{ fontSize: '1.5rem' }}>🃏</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+
+        {/* 2x2 Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 400 }}>
+          {(['A', 'B', 'C', 'D'] as const).map((pos) => {
+            const symbol = data.grid[pos];
+            const isHidden = symbol === null;
+            const isPairMatch = data.phase === 'reveal' && data.pairSymbol && symbol === data.pairSymbol;
+            return (
+              <div key={pos} style={{
+                aspectRatio: '1', borderRadius: 20, display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: '0.3rem',
+                background: isPairMatch
+                  ? 'rgba(34,197,94,0.15)'
+                  : isHidden
+                    ? 'rgba(255,255,255,0.03)'
+                    : `${MM_POS_COLORS[pos]}15`,
+                border: isPairMatch
+                  ? '3px solid #22c55e'
+                  : `2px solid ${isHidden ? 'rgba(255,255,255,0.08)' : `${MM_POS_COLORS[pos]}44`}`,
+                transition: 'all 0.3s',
+              }}>
+                {isHidden ? (
+                  <>
+                    <span style={{ fontSize: '2.5rem' }}>❓</span>
+                    <span style={{ fontSize: '0.7rem', color: '#6b7280', fontWeight: 600 }}>{MM_POS_LABELS[pos]}</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '3rem' }}>{symbol}</span>
+                    <span style={{ fontSize: '0.65rem', color: MM_POS_COLORS[pos], fontWeight: 700 }}>{pos}</span>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Status */}
+        {data.phase === 'flash' && (
+          <p style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.1rem', animation: 'pulse 1s infinite' }}>
+            Memorize the symbols!
+          </p>
+        )}
+        {data.phase === 'input' && (
+          <>
+            <p style={{ color: '#a78bfa', fontWeight: 700, fontSize: '1.1rem' }}>
+              Find the matching pair!
+            </p>
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${(data.inputMs / 6000) * 100}%`, height: '100%',
+                background: data.inputMs > 3000 ? '#22c55e' : data.inputMs > 1500 ? '#f59e0b' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+          </>
+        )}
+        {data.phase === 'reveal' && data.pairSymbol && (
+          <p style={{ fontSize: '1.2rem', fontWeight: 800, color: '#22c55e' }}>
+            The pair was {data.pairSymbol} {data.pairSymbol}!
+          </p>
+        )}
+      </div>
+
+      {/* Player bar */}
+      <div style={{ display: 'flex', gap: '0.5rem', padding: '1rem 2rem', justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
+        {nonHostPlayers.map((p) => {
+          const matched = data.matchedPlayers.includes(p.id);
+          const failed = data.failedPlayers.includes(p.id);
+          return (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.3rem 0.6rem', borderRadius: 10,
+              background: matched ? 'rgba(34,197,94,0.1)' : failed ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${matched ? '#22c55e44' : failed ? '#ef444444' : 'rgba(255,255,255,0.06)'}`,
+            }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+              {matched && <span style={{ fontSize: '0.7rem' }}>✅</span>}
+              {failed && <span style={{ fontSize: '0.7rem' }}>❌</span>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -5047,7 +5186,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -5369,7 +5508,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
