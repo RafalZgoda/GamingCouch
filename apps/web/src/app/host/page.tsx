@@ -467,6 +467,22 @@ interface SpinTheWheelData {
   votes: Record<string, boolean>;
 }
 
+// Copycat Chain data shape
+interface CopycatChainData {
+  chain: ('A' | 'B' | 'C' | 'D')[];
+  phase: 'replay' | 'add' | 'reveal';
+  activePlayerId: string | null;
+  inputProgress: number;
+  inputTimeMs: number;
+  addTimeMs: number;
+  alivePlayers: string[];
+  eliminatedPlayers: string[];
+  lastEliminated: string | null;
+  failedAtIndex: number | null;
+  turnOrder: string[];
+  turnIndex: number;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -499,6 +515,7 @@ const GAME_LABELS: Record<string, string> = {
   dodgeball: '🏐 Dodge Ball',
   priceisright: '💰 Price is Right',
   spinthewheel: '🎡 Spin the Wheel',
+  copycatchain: '🔗 Copycat Chain',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2416,6 +2433,10 @@ function GameView({
     return <SpinTheWheelHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'copycatchain' && gameState) {
+    return <CopycatChainHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3174,6 +3195,142 @@ function SpinTheWheelHostView({ state, players }: { state: GameState; players: P
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Copycat Chain Host View ──────────────────────────────────────────────────
+
+const CC_COLORS: Record<string, string> = { A: '#ef4444', B: '#3b82f6', C: '#22c55e', D: '#f59e0b' };
+const CC_EMOJI: Record<string, string> = { A: '🔴', B: '🔵', C: '🟢', D: '🟡' };
+
+function CopycatChainHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as CopycatChainData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const activePlayer = nonHostPlayers.find((p) => p.id === data.activePlayerId);
+  const eliminatedPlayer = data.lastEliminated ? nonHostPlayers.find((p) => p.id === data.lastEliminated) : null;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Chain: {data.chain.length}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          {data.alivePlayers.length} alive
+        </span>
+        <span style={{ fontSize: '1.5rem' }}>🔗</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+
+        {/* Chain display */}
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', justifyContent: 'center', maxWidth: 600 }}>
+          {data.chain.map((btn, i) => {
+            const isReplayed = data.phase === 'replay' && i < data.inputProgress;
+            const isCurrent = data.phase === 'replay' && i === data.inputProgress;
+            return (
+              <div key={i} style={{
+                width: 36, height: 36, borderRadius: 8,
+                background: CC_COLORS[btn] ?? '#666',
+                opacity: isReplayed ? 1 : isCurrent ? 0.7 : 0.3,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1rem', fontWeight: 700,
+                border: isCurrent ? '2px solid #fff' : '2px solid transparent',
+                transition: 'all 0.2s',
+              }}>
+                {isReplayed ? '✓' : ''}
+              </div>
+            );
+          })}
+          {data.phase === 'add' && (
+            <div style={{
+              width: 36, height: 36, borderRadius: 8,
+              background: 'rgba(167,139,250,0.2)', border: '2px dashed #a78bfa',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1.2rem', animation: 'pulse 1s infinite',
+            }}>?</div>
+          )}
+        </div>
+
+        {/* Active player */}
+        {data.phase !== 'reveal' && activePlayer && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
+              <div style={{ width: 20, height: 20, borderRadius: '50%', background: AVATAR_COLOR_HEX[activePlayer.avatarColor] }} />
+              <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f0f0ff' }}>{activePlayer.name}</span>
+            </div>
+            <p style={{ color: '#a78bfa', fontWeight: 700, fontSize: '1.1rem', margin: '0.5rem 0 0' }}>
+              {data.phase === 'replay'
+                ? `Replay the chain! (${data.inputProgress}/${data.chain.length})`
+                : 'Add a button!'}
+            </p>
+          </div>
+        )}
+
+        {/* Timer */}
+        {data.phase === 'replay' && (
+          <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              width: `${(data.inputTimeMs / (5000 + data.chain.length * 1500)) * 100}%`, height: '100%',
+              background: data.inputTimeMs > 3000 ? '#22c55e' : data.inputTimeMs > 1500 ? '#f59e0b' : '#ef4444',
+              borderRadius: 3, transition: 'width 0.3s linear',
+            }} />
+          </div>
+        )}
+        {data.phase === 'add' && (
+          <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              width: `${(data.addTimeMs / 4000) * 100}%`, height: '100%',
+              background: data.addTimeMs > 2000 ? '#22c55e' : '#f59e0b',
+              borderRadius: 3, transition: 'width 0.3s linear',
+            }} />
+          </div>
+        )}
+
+        {/* Reveal - elimination */}
+        {data.phase === 'reveal' && eliminatedPlayer && (
+          <div style={{
+            padding: '2rem 3rem', borderRadius: 20, textAlign: 'center',
+            background: 'rgba(239,68,68,0.1)', border: '2px solid #ef444466',
+          }}>
+            <span style={{ fontSize: '3rem' }}>💥</span>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ef4444', margin: '0.5rem 0' }}>
+              {eliminatedPlayer.name} is out!
+            </h2>
+            {data.failedAtIndex !== null && (
+              <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                Failed at step {data.failedAtIndex + 1} of {data.chain.length}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Player bar */}
+      <div style={{ display: 'flex', gap: '0.75rem', padding: '1rem 2rem', justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
+        {nonHostPlayers.map((p) => {
+          const alive = data.alivePlayers.includes(p.id);
+          const isActive = p.id === data.activePlayerId;
+          return (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.35rem',
+              padding: '0.3rem 0.7rem', borderRadius: 10,
+              background: isActive ? 'rgba(167,139,250,0.15)' : 'rgba(255,255,255,0.03)',
+              border: isActive ? '1px solid #a78bfa44' : '1px solid rgba(255,255,255,0.06)',
+              opacity: alive ? 1 : 0.35,
+            }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+              {!alive && <span style={{ fontSize: '0.7rem' }}>💀</span>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -4720,7 +4877,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -5042,7 +5199,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
