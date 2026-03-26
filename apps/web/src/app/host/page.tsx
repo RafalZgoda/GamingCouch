@@ -400,6 +400,20 @@ interface FloorIsLavaData {
   eliminatedPlayers: string[];
 }
 
+// Button Mash Race data shape
+interface ButtonMashData {
+  round: number;
+  totalRounds: number;
+  activeButton: 'A' | 'B' | 'C' | 'D';
+  raceTimeMs: number;
+  positions: Record<string, number>;
+  isRacing: boolean;
+  isRoundEnd: boolean;
+  roundEndMs: number;
+  roundWinner: string | null;
+  finishedPlayers: string[];
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -428,6 +442,7 @@ const GAME_LABELS: Record<string, string> = {
   bombdefuse: '💣 Bomb Defuse',
   whackamole: '🔨 Whack-a-Mole',
   floorislava: '🌋 Floor is Lava',
+  buttonmash: '🏃 Button Mash Race',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2329,6 +2344,10 @@ function GameView({
     return <FloorIsLavaHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'buttonmash' && gameState) {
+    return <ButtonMashHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2950,6 +2969,93 @@ function AuctionHouseHostView({ state, players }: { state: GameState; players: P
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Button Mash Race Host View ───────────────────────────────────────────────
+
+const MASH_BUTTON_COLORS: Record<string, string> = { A: '#ef4444', B: '#3b82f6', C: '#22c55e', D: '#f59e0b' };
+
+function ButtonMashHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as ButtonMashData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.raceTimeMs / 10_000;
+  const activeColor = MASH_BUTTON_COLORS[data.activeButton] ?? '#888';
+  const getName = (id: string) => nonHostPlayers.find((p) => p.id === id)?.name ?? '?';
+
+  // Sort players by position for display
+  const sorted = [...nonHostPlayers].sort((a, b) => (data.positions[b.id] ?? 0) - (data.positions[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        {data.isRacing && (
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: timerFraction > 0.3 ? '#22c55e' : '#ef4444' }}>
+            {Math.ceil(data.raceTimeMs / 1000)}s
+          </span>
+        )}
+        <span style={{ fontSize: '1.5rem' }}>🏃</span>
+      </div>
+
+      {/* Active button indicator */}
+      {data.isRacing && (
+        <div style={{ textAlign: 'center', padding: '0.5rem' }}>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>MASH THIS BUTTON</p>
+          <span style={{ fontSize: '3rem', fontWeight: 900, color: activeColor }}>{data.activeButton}</span>
+        </div>
+      )}
+
+      {/* Race lanes */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.75rem', padding: '0 2rem' }}>
+        {sorted.map((p) => {
+          const pos = data.positions[p.id] ?? 0;
+          const fraction = pos / 100;
+          const isWinner = p.id === data.roundWinner;
+          return (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ width: 80, display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#f0f0ff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+              </div>
+              <div style={{ flex: 1, height: 24, background: 'rgba(255,255,255,0.04)', borderRadius: 12, overflow: 'hidden', position: 'relative' }}>
+                <div style={{
+                  width: `${fraction * 100}%`,
+                  height: '100%',
+                  background: isWinner
+                    ? 'linear-gradient(90deg, #22c55e, #16a34a)'
+                    : `linear-gradient(90deg, ${AVATAR_COLOR_HEX[p.avatarColor]}88, ${AVATAR_COLOR_HEX[p.avatarColor]})`,
+                  borderRadius: 12,
+                  transition: 'width 0.1s linear',
+                }} />
+                {isWinner && (
+                  <span style={{ position: 'absolute', right: 8, top: 2, fontSize: '0.75rem', fontWeight: 900, color: '#fff' }}>
+                    WINNER!
+                  </span>
+                )}
+              </div>
+              <span style={{ width: 35, fontSize: '0.75rem', fontWeight: 700, color: '#9ca3af', textAlign: 'right' }}>
+                {pos}%
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Round end */}
+      {data.isRoundEnd && data.roundWinner && (
+        <div style={{ textAlign: 'center', padding: '1rem', flexShrink: 0 }}>
+          <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#22c55e' }}>
+            {getName(data.roundWinner)} wins the race!
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -4178,7 +4284,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -4500,7 +4606,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
