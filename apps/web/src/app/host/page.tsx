@@ -534,6 +534,20 @@ interface HotSeatData {
   isPerfect: boolean;
 }
 
+// Spot the Difference data shape
+interface SpotTheDiffData {
+  round: number;
+  totalRounds: number;
+  phase: 'spot' | 'reveal';
+  theme: string;
+  leftGrid: [string, string, string, string];
+  rightGrid: [string, string, string, string];
+  spotMs: number;
+  spottedPlayerIds: string[];
+  wrongPlayerIds: string[];
+  correctZone: 'A' | 'B' | 'C' | 'D' | null;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -570,6 +584,7 @@ const GAME_LABELS: Record<string, string> = {
   factorcap: '🧢 Fact or Cap',
   matchmadness: '🃏 Match Madness',
   hotseat: '🔥 Hot Seat',
+  spotthediff: '🔍 Spot the Difference',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2503,6 +2518,10 @@ function GameView({
     return <HotSeatHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'spotthediff' && gameState) {
+    return <SpotTheDiffHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3261,6 +3280,111 @@ function SpinTheWheelHostView({ state, players }: { state: GameState; players: P
             </div>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+// ── Spot the Difference Host View ────────────────────────────────────────────
+
+const STD_ZONE_LABELS = ['A: Top-Left', 'B: Top-Right', 'C: Bot-Left', 'D: Bot-Right'];
+
+function SpotTheDiffHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as SpotTheDiffData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.spotMs / 8_000;
+  const zoneIdx = data.correctZone ? ['A', 'B', 'C', 'D'].indexOf(data.correctZone) : -1;
+
+  const renderGrid = (emojis: string[], label: string, highlightIdx: number) => (
+    <div style={{ textAlign: 'center' }}>
+      <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, marginBottom: '0.5rem' }}>{label}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', width: 180 }}>
+        {emojis.map((emoji, i) => (
+          <div key={i} style={{
+            width: 80, height: 80, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '2.5rem',
+            background: data.phase === 'reveal' && i === highlightIdx ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.03)',
+            border: data.phase === 'reveal' && i === highlightIdx ? '3px solid #ef4444' : '2px solid rgba(255,255,255,0.08)',
+            transition: 'all 0.3s',
+          }}>
+            {emoji}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <span style={{ color: '#a78bfa', fontSize: '0.8rem', fontWeight: 600 }}>{data.theme}</span>
+        <div style={{ flex: 1 }} />
+        {data.phase === 'spot' && (
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: timerFraction > 0.5 ? '#22c55e' : '#ef4444' }}>
+            {Math.ceil(data.spotMs / 1000)}s
+          </span>
+        )}
+        <span style={{ fontSize: '1.5rem' }}>🔍</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+
+        {/* Two grids side by side */}
+        <div style={{ display: 'flex', gap: '3rem', alignItems: 'center' }}>
+          {renderGrid([...data.leftGrid], 'ORIGINAL', -1)}
+          <span style={{ fontSize: '2rem', color: '#6b7280' }}>vs</span>
+          {renderGrid([...data.rightGrid], 'CHANGED', zoneIdx)}
+        </div>
+
+        {/* Instructions */}
+        {data.phase === 'spot' && (
+          <>
+            <p style={{ color: '#a78bfa', fontWeight: 700, fontSize: '1.1rem' }}>
+              Which zone is different? Tap A/B/C/D!
+            </p>
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+          </>
+        )}
+
+        {/* Reveal */}
+        {data.phase === 'reveal' && data.correctZone && (
+          <p style={{ fontSize: '1.2rem', fontWeight: 800, color: '#22c55e' }}>
+            Difference was in zone {data.correctZone} ({STD_ZONE_LABELS[zoneIdx]})
+          </p>
+        )}
+      </div>
+
+      {/* Player bar */}
+      <div style={{ display: 'flex', gap: '0.5rem', padding: '1rem 2rem', justifyContent: 'center', flexWrap: 'wrap', flexShrink: 0 }}>
+        {nonHostPlayers.map((p) => {
+          const spotted = data.spottedPlayerIds.includes(p.id);
+          const wrong = data.wrongPlayerIds.includes(p.id);
+          return (
+            <div key={p.id} style={{
+              display: 'flex', alignItems: 'center', gap: '0.3rem',
+              padding: '0.3rem 0.6rem', borderRadius: 10,
+              background: spotted ? 'rgba(34,197,94,0.1)' : wrong ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${spotted ? '#22c55e44' : wrong ? '#ef444444' : 'rgba(255,255,255,0.06)'}`,
+            }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+              <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+              {spotted && <span style={{ fontSize: '0.7rem' }}>✅</span>}
+              {wrong && <span style={{ fontSize: '0.7rem' }}>❌</span>}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -5335,7 +5459,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -5657,7 +5781,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}

@@ -40,3 +40,4 @@ import '../copycatchain/CopycatChainGame.js';
 import '../factorcap/FactOrCapGame.js';
 import '../matchmadness/MatchMadnessGame.js';
 import '../hotseat/HotSeatGame.js';
+import '../spotthediff/SpotTheDiffGame.js';
