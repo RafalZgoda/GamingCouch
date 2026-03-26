@@ -31,3 +31,4 @@ import '../auctionhouse/AuctionHouseGame.js';
 import '../rps/RPSGame.js';
 import '../bombdefuse/BombDefuseGame.js';
 import '../whackamole/WhackAMoleGame.js';
+import '../floorislava/FloorIsLavaGame.js';
