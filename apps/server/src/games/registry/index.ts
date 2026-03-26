@@ -28,3 +28,4 @@ import '../simonsays/SimonSaysGame.js';
 import '../debateclub/DebateClubGame.js';
 import '../categorysprint/CategorySprintGame.js';
 import '../auctionhouse/AuctionHouseGame.js';
+import '../rps/RPSGame.js';

@@ -341,6 +341,17 @@ interface NeverHaveIEverData {
   isReveal: boolean;
 }
 
+// Rock Paper Scissors data shape
+interface RPSData {
+  round: number;
+  totalRounds: number;
+  pickWindowMs: number;
+  pickedPlayerIds: string[];
+  isReveal: boolean;
+  choices: Record<string, 'rock' | 'paper' | 'scissors'>;
+  results: Record<string, { wins: number; losses: number; draws: number }>;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -365,6 +376,7 @@ const GAME_LABELS: Record<string, string> = {
   debateclub: '🎤 Debate Club',
   categorysprint: '📋 Category Sprint',
   auctionhouse: '🔨 Auction House',
+  rps: '✊ Rock Paper Scissors',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2250,6 +2262,10 @@ function GameView({
     return <AuctionHouseHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'rps' && gameState) {
+    return <RPSHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2868,6 +2884,100 @@ function AuctionHouseHostView({ state, players }: { state: GameState; players: P
                 No unique bids — nobody wins!
               </p>
             )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Rock Paper Scissors Host View ────────────────────────────────────────────
+
+const MOVE_EMOJI: Record<string, string> = { rock: '🪨', paper: '📄', scissors: '✂️' };
+const MOVE_COLOR: Record<string, string> = { rock: '#6b7280', paper: '#3b82f6', scissors: '#ef4444' };
+
+function RPSHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as RPSData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.pickWindowMs / 5_000;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>✊</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {!data.isReveal ? (
+          <>
+            {/* Pick phase */}
+            <div style={{ display: 'flex', gap: '2rem', fontSize: '4rem' }}>
+              <span>🪨</span><span>📄</span><span>✂️</span>
+            </div>
+
+            <p style={{ color: '#a78bfa', fontSize: '1.5rem', fontWeight: 800 }}>
+              Choose your move!
+            </p>
+
+            {/* Timer */}
+            <div style={{ width: '100%', maxWidth: 400, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.3 ? '#22c55e' : '#ef4444',
+                borderRadius: 4, transition: 'width 0.3s linear',
+              }} />
+            </div>
+
+            <p style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+              {data.pickedPlayerIds.length} / {nonHostPlayers.length} locked in
+            </p>
+          </>
+        ) : (
+          <>
+            {/* Reveal phase */}
+            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.map((p) => {
+                const choice = data.choices[p.id];
+                const result = data.results[p.id];
+                const isNetWinner = result && result.wins > result.losses;
+                return (
+                  <div key={p.id} style={{
+                    padding: '1rem 1.5rem', borderRadius: 16,
+                    background: isNetWinner ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: `2px solid ${isNetWinner ? '#22c55e' : 'rgba(255,255,255,0.06)'}`,
+                    textAlign: 'center', minWidth: 100,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', marginBottom: '0.5rem' }}>
+                      <div style={{ width: 14, height: 14, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f0f0ff' }}>{p.name}</span>
+                    </div>
+                    {choice ? (
+                      <>
+                        <span style={{ fontSize: '3rem' }}>{MOVE_EMOJI[choice]}</span>
+                        <p style={{ fontSize: '0.8rem', fontWeight: 800, color: MOVE_COLOR[choice], textTransform: 'capitalize', margin: '0.25rem 0 0' }}>
+                          {choice}
+                        </p>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '2rem', color: '#6b7280' }}>?</span>
+                    )}
+                    {result && (
+                      <p style={{ fontSize: '0.75rem', color: '#9ca3af', margin: '0.25rem 0 0' }}>
+                        {result.wins}W {result.losses}L {result.draws}D
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </>
         )}
       </div>
@@ -3677,7 +3787,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -3999,7 +4109,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
