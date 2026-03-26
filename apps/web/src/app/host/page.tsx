@@ -202,6 +202,23 @@ interface WouldYouRatherData {
   percentB: number;
 }
 
+// Auction House data shape
+interface AuctionHouseData {
+  itemName: string;
+  itemHint: string;
+  round: number;
+  totalRounds: number;
+  bidWindowMs: number;
+  bidderIds: string[];
+  isReveal: boolean;
+  itemValue: number | null;
+  bids: Record<string, number>;
+  winnerId: string | null;
+  winnerBid: number | null;
+  tiedBids: number[];
+  profit: number | null;
+}
+
 // Category Sprint data shape
 interface CategorySprintData {
   category: string;
@@ -347,6 +364,7 @@ const GAME_LABELS: Record<string, string> = {
   simonsays: '🧠 Simon Says',
   debateclub: '🎤 Debate Club',
   categorysprint: '📋 Category Sprint',
+  auctionhouse: '🔨 Auction House',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2228,6 +2246,10 @@ function GameView({
     return <CategorySprintHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'auctionhouse' && gameState) {
+    return <AuctionHouseHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2710,6 +2732,142 @@ function LuckyNumberHostView({ state, players }: { state: GameState; players: Pl
                 );
               })}
             </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Auction House Host View ─────────────────────────────────────────────────
+
+const BID_COLORS: Record<number, string> = { 100: '#22c55e', 200: '#3b82f6', 500: '#f59e0b', 1000: '#ef4444' };
+
+function AuctionHouseHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as AuctionHouseData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const getName = (id: string) => nonHostPlayers.find((p) => p.id === id)?.name ?? '?';
+  const timerFraction = data.bidWindowMs / 8_000;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>🔨</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Item display */}
+        <div style={{
+          padding: '2rem 3rem', borderRadius: 20,
+          background: 'rgba(245,158,11,0.08)',
+          border: '2px solid rgba(245,158,11,0.25)',
+          maxWidth: 500, textAlign: 'center',
+        }}>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600 }}>MYSTERY ITEM</p>
+          <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#f59e0b', margin: '0.5rem 0' }}>
+            {data.itemName}
+          </h2>
+          <p style={{ fontSize: '1rem', color: '#9ca3af', fontStyle: 'italic' }}>
+            &ldquo;{data.itemHint}&rdquo;
+          </p>
+          {data.isReveal && data.itemValue !== null && (
+            <p style={{ fontSize: '1.5rem', fontWeight: 900, color: '#a78bfa', marginTop: '1rem' }}>
+              True value: {data.itemValue} pts
+            </p>
+          )}
+        </div>
+
+        {/* Bidding phase */}
+        {!data.isReveal && (
+          <>
+            <p style={{ color: '#a78bfa', fontSize: '1.2rem', fontWeight: 700 }}>
+              Place your bid! Highest UNIQUE bid wins.
+            </p>
+
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.3 ? '#22c55e' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+
+            {/* Bid options */}
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              {[100, 200, 500, 1000].map((v) => (
+                <div key={v} style={{
+                  padding: '0.75rem 1.5rem', borderRadius: 12,
+                  background: `${BID_COLORS[v]}15`, border: `2px solid ${BID_COLORS[v]}44`,
+                  textAlign: 'center',
+                }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 900, color: BID_COLORS[v] }}>{v}</span>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+              {data.bidderIds.length} / {nonHostPlayers.length} placed bids
+            </p>
+          </>
+        )}
+
+        {/* Reveal phase */}
+        {data.isReveal && (
+          <>
+            {/* All bids */}
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.map((p) => {
+                const bid = data.bids[p.id];
+                const isWinner = p.id === data.winnerId;
+                const isTied = bid !== undefined && data.tiedBids.includes(bid);
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.75rem 1.25rem', borderRadius: 16,
+                    background: isWinner ? 'rgba(34,197,94,0.15)' : isTied ? 'rgba(239,68,68,0.08)' : 'rgba(255,255,255,0.03)',
+                    border: `2px solid ${isWinner ? '#22c55e' : isTied ? '#ef444444' : 'rgba(255,255,255,0.06)'}`,
+                    textAlign: 'center', minWidth: 90,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', marginBottom: '0.3rem' }}>
+                      <div style={{ width: 12, height: 12, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                    </div>
+                    {bid !== undefined ? (
+                      <span style={{ fontSize: '1.5rem', fontWeight: 900, color: BID_COLORS[bid] ?? '#888' }}>{bid}</span>
+                    ) : (
+                      <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>No bid</span>
+                    )}
+                    {isWinner && <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#22c55e', margin: 0 }}>WINNER!</p>}
+                    {isTied && <p style={{ fontSize: '0.7rem', color: '#ef4444', margin: 0 }}>TIED</p>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Result */}
+            {data.winnerId ? (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#22c55e' }}>
+                  {getName(data.winnerId)} wins with a bid of {data.winnerBid}!
+                </p>
+                {data.profit !== null && (
+                  <p style={{ fontSize: '1rem', color: data.profit >= 0 ? '#22c55e' : '#ef4444', fontWeight: 700 }}>
+                    {data.profit >= 0 ? `Profit: +${data.profit}` : `Overpaid by ${Math.abs(data.profit)}`}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f59e0b' }}>
+                No unique bids — nobody wins!
+              </p>
+            )}
           </>
         )}
       </div>
@@ -3519,7 +3677,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -3841,7 +3999,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
