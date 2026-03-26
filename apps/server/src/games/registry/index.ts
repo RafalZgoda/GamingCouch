@@ -34,3 +34,4 @@ import '../whackamole/WhackAMoleGame.js';
 import '../floorislava/FloorIsLavaGame.js';
 import '../buttonmash/ButtonMashGame.js';
 import '../dodgeball/DodgeBallGame.js';
+import '../priceisright/PriceIsRightGame.js';

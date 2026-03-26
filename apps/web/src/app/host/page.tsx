@@ -432,6 +432,23 @@ interface DodgeBallData {
   eliminatedPlayers: string[];
 }
 
+// Price is Right data shape
+interface PriceIsRightData {
+  round: number;
+  totalRounds: number;
+  prompt: string;
+  category: string;
+  unit: string;
+  ranges: string[];
+  guessWindowMs: number;
+  guessedPlayerIds: string[];
+  isReveal: boolean;
+  correctIndex: number | null;
+  closeIndex: number | null;
+  answer: number | null;
+  playerGuesses: Record<string, number>;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -462,6 +479,7 @@ const GAME_LABELS: Record<string, string> = {
   floorislava: '🌋 Floor is Lava',
   buttonmash: '🏃 Button Mash Race',
   dodgeball: '🏐 Dodge Ball',
+  priceisright: '💰 Price is Right',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2371,6 +2389,10 @@ function GameView({
     return <DodgeBallHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'priceisright' && gameState) {
+    return <PriceIsRightHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2990,6 +3012,130 @@ function AuctionHouseHostView({ state, players }: { state: GameState; players: P
               </p>
             )}
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Price is Right Host View ─────────────────────────────────────────────────
+
+const PIR_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+
+function PriceIsRightHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as PriceIsRightData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.guessWindowMs / 10_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        {!data.isReveal && (
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: timerColor }}>
+            {Math.ceil(data.guessWindowMs / 1000)}s
+          </span>
+        )}
+        <span style={{ fontSize: '1.5rem' }}>💰</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+
+        {/* Category + prompt */}
+        <span style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase' }}>{data.category}</span>
+        <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#a78bfa', textAlign: 'center', margin: 0 }}>
+          {data.prompt}
+        </h2>
+
+        {/* Answer reveal */}
+        {data.isReveal && data.answer !== null && (
+          <p style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f59e0b' }}>
+            {data.answer.toLocaleString()} {data.unit}
+          </p>
+        )}
+
+        {/* Timer */}
+        {!data.isReveal && (
+          <div style={{ width: '100%', maxWidth: 500, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <div style={{
+              width: `${timerFraction * 100}%`, height: '100%',
+              background: timerColor, borderRadius: 3, transition: 'width 0.3s linear',
+            }} />
+          </div>
+        )}
+
+        {/* Options grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 600 }}>
+          {data.ranges.map((range, i) => {
+            const isCorrect = data.isReveal && data.correctIndex === i;
+            const isClose = data.isReveal && data.closeIndex === i;
+            const bg = data.isReveal
+              ? isCorrect ? 'rgba(34,197,94,0.2)' : isClose ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.08)'
+              : `${PIR_COLORS[i]}15`;
+            const border = data.isReveal
+              ? isCorrect ? '#22c55e' : isClose ? '#f59e0b' : '#ef444444'
+              : `${PIR_COLORS[i]}44`;
+
+            return (
+              <div key={i} style={{
+                padding: '1rem', borderRadius: 12,
+                background: bg, border: `2px solid ${border}`,
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+              }}>
+                <span style={{
+                  width: 36, height: 36, borderRadius: '50%', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  background: `${PIR_COLORS[i]}25`, color: PIR_COLORS[i],
+                  fontWeight: 900, fontSize: '0.9rem',
+                }}>
+                  {['A', 'B', 'C', 'D'][i]}
+                </span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>{range}</span>
+                {isCorrect && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', fontWeight: 800, color: '#22c55e' }}>CORRECT</span>}
+                {isClose && <span style={{ marginLeft: 'auto', fontSize: '0.75rem', fontWeight: 800, color: '#f59e0b' }}>CLOSE</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Player guesses on reveal */}
+        {data.isReveal && (
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {nonHostPlayers.map((p) => {
+              const guess = data.playerGuesses[p.id];
+              const isCorrect = guess === data.correctIndex;
+              const isClose = guess === data.closeIndex;
+              return (
+                <div key={p.id} style={{
+                  padding: '0.4rem 0.8rem', borderRadius: 12,
+                  background: isCorrect ? 'rgba(34,197,94,0.12)' : isClose ? 'rgba(245,158,11,0.1)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isCorrect ? '#22c55e' : isClose ? '#f59e0b' : 'rgba(255,255,255,0.06)'}`,
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                  {guess !== undefined && (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: PIR_COLORS[guess] }}>
+                      {['A', 'B', 'C', 'D'][guess]}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {!data.isReveal && (
+          <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+            {data.guessedPlayerIds.length} / {nonHostPlayers.length} guessed
+          </p>
         )}
       </div>
     </div>
@@ -4413,7 +4559,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -4735,7 +4881,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
