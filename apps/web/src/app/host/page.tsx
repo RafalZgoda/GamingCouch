@@ -483,6 +483,25 @@ interface CopycatChainData {
   turnIndex: number;
 }
 
+// Fact or Cap data shape
+interface FactOrCapData {
+  round: number;
+  totalRounds: number;
+  phase: 'present' | 'vote' | 'reveal';
+  presenterId: string | null;
+  statement: string | null;
+  category: string | null;
+  presentMs: number;
+  voteMs: number;
+  presenterChose: boolean;
+  votedPlayerIds: string[];
+  isTruth: boolean;
+  truthStatement: string | null;
+  lieStatement: string | null;
+  votes: Record<string, 'fact' | 'cap'>;
+  fooledPlayerIds: string[];
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -516,6 +535,7 @@ const GAME_LABELS: Record<string, string> = {
   priceisright: '💰 Price is Right',
   spinthewheel: '🎡 Spin the Wheel',
   copycatchain: '🔗 Copycat Chain',
+  factorcap: '🧢 Fact or Cap',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2437,6 +2457,10 @@ function GameView({
     return <CopycatChainHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'factorcap' && gameState) {
+    return <FactOrCapHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3193,6 +3217,152 @@ function SpinTheWheelHostView({ state, players }: { state: GameState; players: P
                 );
               })}
             </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Fact or Cap Host View ────────────────────────────────────────────────────
+
+function FactOrCapHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as FactOrCapData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const presenter = nonHostPlayers.find((p) => p.id === data.presenterId);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        {data.category && (
+          <span style={{ color: '#6b7280', fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: 6 }}>
+            {data.category}
+          </span>
+        )}
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>🧢</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Presenter info */}
+        {presenter && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ width: 20, height: 20, borderRadius: '50%', background: AVATAR_COLOR_HEX[presenter.avatarColor] }} />
+            <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#f0f0ff' }}>{presenter.name}</span>
+            <span style={{ color: '#6b7280', fontSize: '0.85rem' }}>is presenting</span>
+          </div>
+        )}
+
+        {/* Present phase */}
+        {data.phase === 'present' && !data.presenterChose && (
+          <>
+            <div style={{ fontSize: '3rem', animation: 'pulse 1.5s infinite' }}>🤔</div>
+            <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#a78bfa' }}>
+              {presenter?.name} is choosing: Truth or Lie?
+            </p>
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${(data.presentMs / 10_000) * 100}%`, height: '100%',
+                background: data.presentMs > 5000 ? '#22c55e' : '#f59e0b',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+          </>
+        )}
+
+        {/* Vote phase */}
+        {data.phase === 'vote' && data.statement && (
+          <>
+            <div style={{
+              padding: '2rem 3rem', borderRadius: 20, maxWidth: 600, textAlign: 'center',
+              background: 'rgba(167,139,250,0.08)', border: '2px solid rgba(167,139,250,0.25)',
+            }}>
+              <p style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 0.5rem' }}>
+                {presenter?.name} says...
+              </p>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f0f0ff', margin: 0, lineHeight: 1.4 }}>
+                &ldquo;{data.statement}&rdquo;
+              </h2>
+            </div>
+
+            <div style={{ display: 'flex', gap: '2rem' }}>
+              <div style={{ padding: '1rem 2rem', borderRadius: 16, background: 'rgba(34,197,94,0.1)', border: '2px solid #22c55e44', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>📖</span>
+                <p style={{ fontWeight: 700, color: '#22c55e', margin: '0.25rem 0 0' }}>FACT</p>
+              </div>
+              <div style={{ padding: '1rem 2rem', borderRadius: 16, background: 'rgba(239,68,68,0.1)', border: '2px solid #ef444444', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>🧢</span>
+                <p style={{ fontWeight: 700, color: '#ef4444', margin: '0.25rem 0 0' }}>CAP</p>
+              </div>
+            </div>
+
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${(data.voteMs / 8_000) * 100}%`, height: '100%',
+                background: data.voteMs > 4000 ? '#22c55e' : data.voteMs > 2000 ? '#f59e0b' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>{data.votedPlayerIds.length} voted</p>
+          </>
+        )}
+
+        {/* Reveal phase */}
+        {data.phase === 'reveal' && (
+          <>
+            <div style={{
+              padding: '1.5rem 3rem', borderRadius: 20, textAlign: 'center',
+              background: data.isTruth ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+              border: `2px solid ${data.isTruth ? '#22c55e' : '#ef4444'}`,
+            }}>
+              <span style={{ fontSize: '3rem' }}>{data.isTruth ? '📖' : '🧢'}</span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: data.isTruth ? '#22c55e' : '#ef4444' }}>
+                {data.isTruth ? 'That was a FACT!' : 'That was CAP!'}
+              </h2>
+            </div>
+
+            {data.truthStatement && (
+              <div style={{ maxWidth: 500, textAlign: 'center' }}>
+                <p style={{ color: '#22c55e', fontSize: '0.85rem', fontWeight: 600 }}>Truth: {data.truthStatement}</p>
+                {data.lieStatement && (
+                  <p style={{ color: '#ef4444', fontSize: '0.85rem', fontWeight: 600, marginTop: '0.25rem' }}>Lie: {data.lieStatement}</p>
+                )}
+              </div>
+            )}
+
+            {/* Voter results */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.filter((p) => p.id !== data.presenterId).map((p) => {
+                const vote = data.votes[p.id];
+                const fooled = data.fooledPlayerIds.includes(p.id);
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.3rem 0.6rem', borderRadius: 10,
+                    background: fooled ? 'rgba(239,68,68,0.1)' : 'rgba(34,197,94,0.1)',
+                    border: `1px solid ${fooled ? '#ef444444' : '#22c55e44'}`,
+                    display: 'flex', alignItems: 'center', gap: '0.3rem',
+                  }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                    <span style={{ fontSize: '0.8rem' }}>{vote === 'fact' ? '📖' : vote === 'cap' ? '🧢' : '🤷'}</span>
+                    {fooled && <span style={{ fontSize: '0.65rem', color: '#ef4444' }}>fooled!</span>}
+                  </div>
+                );
+              })}
+            </div>
+
+            {data.fooledPlayerIds.length > 0 && presenter && (
+              <p style={{ color: '#f59e0b', fontSize: '0.9rem', fontWeight: 700 }}>
+                {presenter.name} fooled {data.fooledPlayerIds.length} player{data.fooledPlayerIds.length > 1 ? 's' : ''}!
+              </p>
+            )}
           </>
         )}
       </div>
@@ -4877,7 +5047,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -5199,7 +5369,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
