@@ -202,6 +202,26 @@ interface WouldYouRatherData {
   percentB: number;
 }
 
+// Debate Club data shape
+interface DebateClubData {
+  statement: string;
+  round: number;
+  totalRounds: number;
+  phase: 'vote1' | 'reveal1' | 'revote' | 'reveal_final';
+  voteWindowMs: number;
+  votedPlayerIds: string[];
+  agreePlayerIds: string[];
+  disagreePlayerIds: string[];
+  agreePercent: number;
+  disagreePercent: number;
+  minoritySide: 'agree' | 'disagree' | null;
+  revoteAgreeIds: string[];
+  revoteDisagreeIds: string[];
+  mindsChanged: number;
+  revoteAgreePercent: number;
+  revoteDisagreePercent: number;
+}
+
 // Simon Says data shape
 interface SimonSaysData {
   sequenceLength: number;
@@ -312,6 +332,7 @@ const GAME_LABELS: Record<string, string> = {
   emojidecoder: '😎 Emoji Decoder',
   tugofwar: '🪢 Tug of War',
   simonsays: '🧠 Simon Says',
+  debateclub: '🎤 Debate Club',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2185,6 +2206,10 @@ function GameView({
     return <SimonSaysHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'debateclub' && gameState) {
+    return <DebateClubHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2667,6 +2692,141 @@ function LuckyNumberHostView({ state, players }: { state: GameState; players: Pl
                 );
               })}
             </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Debate Club Host View ───────────────────────────────────────────────────
+
+function DebateClubHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as DebateClubData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const getName = (id: string) => nonHostPlayers.find((p) => p.id === id)?.name ?? '?';
+  const timerFraction = data.voteWindowMs / 8_000;
+
+  const isVoting = data.phase === 'vote1' || data.phase === 'revote';
+  const isReveal = data.phase === 'reveal1' || data.phase === 'reveal_final';
+  const isFinalReveal = data.phase === 'reveal_final';
+
+  const agreeP = isFinalReveal ? data.revoteAgreePercent : data.agreePercent;
+  const disagreeP = isFinalReveal ? data.revoteDisagreePercent : data.disagreePercent;
+  const agreeNames = isFinalReveal ? data.revoteAgreeIds : data.agreePlayerIds;
+  const disagreeNames = isFinalReveal ? data.revoteDisagreeIds : data.disagreePlayerIds;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1 }} />
+        {data.phase === 'revote' && (
+          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f59e0b' }}>REVOTE!</span>
+        )}
+        <span style={{ fontSize: '1.5rem' }}>🎤</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Statement */}
+        <div style={{
+          padding: '2rem 3rem', borderRadius: 20,
+          background: 'rgba(124,58,237,0.08)',
+          border: '2px solid rgba(124,58,237,0.2)',
+          maxWidth: 700, textAlign: 'center',
+        }}>
+          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontWeight: 600, marginBottom: '0.5rem' }}>HOT TAKE</p>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, color: '#f0f0ff', lineHeight: 1.3 }}>
+            &ldquo;{data.statement}&rdquo;
+          </h2>
+        </div>
+
+        {/* Voting phase */}
+        {isVoting && (
+          <>
+            <div style={{ width: '100%', maxWidth: 400, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.3 ? '#22c55e' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '2rem' }}>
+              <div style={{ padding: '1rem 2rem', borderRadius: 16, background: 'rgba(34,197,94,0.1)', border: '2px solid rgba(34,197,94,0.3)', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>👍</span>
+                <p style={{ color: '#22c55e', fontWeight: 700, fontSize: '0.9rem' }}>AGREE</p>
+              </div>
+              <div style={{ padding: '1rem 2rem', borderRadius: 16, background: 'rgba(239,68,68,0.1)', border: '2px solid rgba(239,68,68,0.3)', textAlign: 'center' }}>
+                <span style={{ fontSize: '2rem' }}>👎</span>
+                <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '0.9rem' }}>DISAGREE</p>
+              </div>
+            </div>
+
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>
+              {data.votedPlayerIds.length} / {nonHostPlayers.length} voted
+            </p>
+          </>
+        )}
+
+        {/* Reveal phase */}
+        {isReveal && (
+          <>
+            {/* Bar chart */}
+            <div style={{ width: '100%', maxWidth: 600, display: 'flex', height: 50, borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{
+                width: `${agreeP}%`, background: '#22c55e',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 900, fontSize: '1.2rem', color: '#fff',
+                transition: 'width 0.5s ease',
+                minWidth: agreeP > 0 ? 50 : 0,
+              }}>
+                {agreeP > 0 && `${agreeP}%`}
+              </div>
+              <div style={{
+                width: `${disagreeP}%`, background: '#ef4444',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 900, fontSize: '1.2rem', color: '#fff',
+                transition: 'width 0.5s ease',
+                minWidth: disagreeP > 0 ? 50 : 0,
+              }}>
+                {disagreeP > 0 && `${disagreeP}%`}
+              </div>
+            </div>
+
+            {/* Voter names */}
+            <div style={{ display: 'flex', gap: '3rem', justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#22c55e', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem' }}>AGREE</p>
+                {agreeNames.map((id) => (
+                  <p key={id} style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{getName(id)}</p>
+                ))}
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#ef4444', fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.5rem' }}>DISAGREE</p>
+                {disagreeNames.map((id) => (
+                  <p key={id} style={{ fontSize: '0.8rem', color: '#9ca3af' }}>{getName(id)}</p>
+                ))}
+              </div>
+            </div>
+
+            {isFinalReveal && data.mindsChanged > 0 && (
+              <p style={{ color: '#f59e0b', fontWeight: 800, fontSize: '1.1rem' }}>
+                {data.mindsChanged} mind{data.mindsChanged > 1 ? 's' : ''} changed!
+              </p>
+            )}
+
+            {data.phase === 'reveal1' && (
+              <p style={{ color: '#a78bfa', fontWeight: 700, fontSize: '1rem' }}>
+                Minority must defend their position... Revote incoming!
+              </p>
+            )}
           </>
         )}
       </div>
@@ -3232,7 +3392,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -3554,7 +3714,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
