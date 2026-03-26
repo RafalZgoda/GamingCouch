@@ -367,6 +367,21 @@ interface BombDefuseData {
   streaks: Record<string, number>;
 }
 
+// Whack-a-Mole data shape
+interface WhackAMoleData {
+  round: number;
+  totalRounds: number;
+  activeZone: 'A' | 'B' | 'C' | 'D' | null;
+  isDecoy: boolean;
+  targetIndex: number;
+  totalTargets: number;
+  showTimeMs: number;
+  isRoundPause: boolean;
+  roundPauseMs: number;
+  roundHits: Record<string, number>;
+  roundMisses: Record<string, number>;
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -393,6 +408,7 @@ const GAME_LABELS: Record<string, string> = {
   auctionhouse: '🔨 Auction House',
   rps: '✊ Rock Paper Scissors',
   bombdefuse: '💣 Bomb Defuse',
+  whackamole: '🔨 Whack-a-Mole',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2286,6 +2302,10 @@ function GameView({
     return <BombDefuseHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'whackamole' && gameState) {
+    return <WhackAMoleHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2903,6 +2923,104 @@ function AuctionHouseHostView({ state, players }: { state: GameState; players: P
               <p style={{ fontSize: '1.3rem', fontWeight: 800, color: '#f59e0b' }}>
                 No unique bids — nobody wins!
               </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Whack-a-Mole Host View ───────────────────────────────────────────────────
+
+const ZONE_POS: Record<string, { row: number; col: number }> = {
+  A: { row: 0, col: 0 }, B: { row: 0, col: 1 },
+  C: { row: 1, col: 0 }, D: { row: 1, col: 1 },
+};
+const ZONE_COLORS = { A: '#ef4444', B: '#3b82f6', C: '#22c55e', D: '#f59e0b' };
+
+function WhackAMoleHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as WhackAMoleData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <span style={{ color: '#4b5563', fontSize: '0.75rem' }}>
+          Target {Math.min(data.targetIndex + 1, data.totalTargets)} / {data.totalTargets}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '1.5rem' }}>🔨</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {data.isRoundPause ? (
+          <>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#a78bfa' }}>Round {data.round} Complete!</p>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {nonHostPlayers.map((p) => {
+                const hits = data.roundHits[p.id] ?? 0;
+                const misses = data.roundMisses[p.id] ?? 0;
+                return (
+                  <div key={p.id} style={{
+                    padding: '0.75rem 1.25rem', borderRadius: 16,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '2px solid rgba(255,255,255,0.06)',
+                    textAlign: 'center', minWidth: 90,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', justifyContent: 'center', marginBottom: '0.3rem' }}>
+                      <div style={{ width: 12, height: 12, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                    </div>
+                    <p style={{ fontSize: '0.9rem', color: '#22c55e', fontWeight: 800, margin: 0 }}>{hits} hits</p>
+                    {misses > 0 && <p style={{ fontSize: '0.75rem', color: '#ef4444', margin: 0 }}>{misses} miss</p>}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* 2x2 Grid */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1fr',
+              gap: '1.5rem', width: '100%', maxWidth: 400,
+            }}>
+              {(['A', 'B', 'C', 'D'] as const).map((zone) => {
+                const isActive = data.activeZone === zone;
+                const color = ZONE_COLORS[zone];
+                return (
+                  <div key={zone} style={{
+                    aspectRatio: '1', borderRadius: 20,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isActive
+                      ? data.isDecoy ? 'rgba(239,68,68,0.3)' : `${color}30`
+                      : 'rgba(255,255,255,0.03)',
+                    border: `3px solid ${isActive
+                      ? data.isDecoy ? '#ef4444' : color
+                      : 'rgba(255,255,255,0.06)'}`,
+                    transition: 'all 0.1s',
+                    boxShadow: isActive ? `0 0 30px ${data.isDecoy ? '#ef444444' : color + '44'}` : 'none',
+                  }}>
+                    {isActive ? (
+                      <span style={{ fontSize: '3rem' }}>{data.isDecoy ? '❌' : '🎯'}</span>
+                    ) : (
+                      <span style={{ fontSize: '1.5rem', color: '#333', fontWeight: 900 }}>{zone}</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {data.isDecoy && data.activeZone && (
+              <p style={{ color: '#ef4444', fontSize: '0.9rem', fontWeight: 700 }}>DECOY! Don&apos;t tap!</p>
             )}
           </>
         )}
@@ -3931,7 +4049,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -4253,7 +4371,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
