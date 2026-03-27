@@ -565,6 +565,20 @@ interface MimeTimeData {
   category: string;
 }
 
+// Two Truths One Lie data shape
+interface TwoTruthsData {
+  round: number;
+  totalRounds: number;
+  phase: 'vote' | 'reveal';
+  category: string;
+  statements: [string, string, string];
+  voteMs: number;
+  votedPlayerIds: string[];
+  lieIndex: number | null;
+  playerVotes: Record<string, number>;
+  correctPlayerIds: string[];
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -603,6 +617,7 @@ const GAME_LABELS: Record<string, string> = {
   hotseat: '🔥 Hot Seat',
   spotthediff: '🔍 Spot the Difference',
   mimetime: '🎭 Mime Time',
+  twotruths: '🤥 Two Truths One Lie',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2544,6 +2559,10 @@ function GameView({
     return <MimeTimeHostView state={gameState} players={players} />;
   }
 
+  if (gameId === 'twotruths' && gameState) {
+    return <TwoTruthsHostView state={gameState} players={players} />;
+  }
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#000', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', gap: '1rem', padding: '0.6rem 1.5rem', background: 'rgba(15,15,26,0.9)', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -3301,6 +3320,115 @@ function SpinTheWheelHostView({ state, players }: { state: GameState; players: P
               })}
             </div>
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Two Truths One Lie Host View ─────────────────────────────────────────────
+
+const TT_COLORS = ['#ef4444', '#3b82f6', '#22c55e'];
+const TT_LABELS = ['A', 'B', 'C'];
+
+function TwoTruthsHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as TwoTruthsData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const timerFraction = data.voteMs / 12_000;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <span style={{ color: '#6b7280', fontSize: '0.75rem', padding: '0.2rem 0.5rem', background: 'rgba(255,255,255,0.05)', borderRadius: 6 }}>
+          {data.category}
+        </span>
+        <div style={{ flex: 1 }} />
+        {data.phase === 'vote' && (
+          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: timerFraction > 0.5 ? '#22c55e' : '#ef4444' }}>
+            {Math.ceil(data.voteMs / 1000)}s
+          </span>
+        )}
+        <span style={{ fontSize: '1.5rem' }}>🤥</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+
+        <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#a78bfa', textAlign: 'center', margin: 0 }}>
+          Which one is the LIE?
+        </h2>
+
+        {/* Statements */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', maxWidth: 600 }}>
+          {data.statements.map((stmt, i) => {
+            const isLie = data.phase === 'reveal' && data.lieIndex === i;
+            const isTruth = data.phase === 'reveal' && data.lieIndex !== i;
+            const bg = data.phase === 'reveal'
+              ? isLie ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.1)'
+              : `${TT_COLORS[i]}10`;
+            const border = data.phase === 'reveal'
+              ? isLie ? '#ef4444' : '#22c55e66'
+              : `${TT_COLORS[i]}44`;
+
+            return (
+              <div key={i} style={{
+                padding: '1rem 1.25rem', borderRadius: 16,
+                background: bg, border: `2px solid ${border}`,
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                transition: 'all 0.3s',
+              }}>
+                <span style={{
+                  width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: TT_COLORS[i], color: '#fff', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0,
+                }}>{TT_LABELS[i]}</span>
+                <p style={{ fontSize: '1rem', fontWeight: 600, color: '#f0f0ff', margin: 0, flex: 1 }}>{stmt}</p>
+                {isLie && <span style={{ fontSize: '1.2rem' }}>🤥</span>}
+                {isTruth && <span style={{ fontSize: '1.2rem' }}>✅</span>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Timer */}
+        {data.phase === 'vote' && (
+          <>
+            <div style={{ width: '100%', maxWidth: 500, height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{
+                width: `${timerFraction * 100}%`, height: '100%',
+                background: timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444',
+                borderRadius: 3, transition: 'width 0.3s linear',
+              }} />
+            </div>
+            <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>{data.votedPlayerIds.length} voted</p>
+          </>
+        )}
+
+        {/* Reveal voter results */}
+        {data.phase === 'reveal' && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {nonHostPlayers.map((p) => {
+              const correct = data.correctPlayerIds.includes(p.id);
+              const voted = data.playerVotes[p.id] !== undefined;
+              return (
+                <div key={p.id} style={{
+                  padding: '0.3rem 0.6rem', borderRadius: 10,
+                  background: correct ? 'rgba(34,197,94,0.1)' : voted ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${correct ? '#22c55e44' : voted ? '#ef444444' : 'rgba(255,255,255,0.06)'}`,
+                  display: 'flex', alignItems: 'center', gap: '0.3rem',
+                }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                  <span style={{ fontSize: '0.7rem', color: TT_COLORS[data.playerVotes[p.id] ?? 0] }}>{TT_LABELS[data.playerVotes[p.id] ?? 0]}</span>
+                  <span style={{ fontSize: '0.8rem' }}>{correct ? '✅' : voted ? '❌' : '🤷'}</span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
@@ -5604,7 +5732,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -5926,7 +6054,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}

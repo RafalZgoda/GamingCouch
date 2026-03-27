@@ -42,3 +42,4 @@ import '../matchmadness/MatchMadnessGame.js';
 import '../hotseat/HotSeatGame.js';
 import '../spotthediff/SpotTheDiffGame.js';
 import '../mimetime/MimeTimeGame.js';
+import '../twotruths/TwoTruthsGame.js';
