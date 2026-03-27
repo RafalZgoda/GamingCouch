@@ -52,3 +52,5 @@ import '../beatdrop/BeatDropGame.js';
 import '../bidorbust/BidOrBustGame.js';
 import '../mapattack/MapAttackGame.js';
 import '../oddoneout/OddOneOutGame.js';
+import '../emojistory/EmojiStoryGame.js';
+import '../photofinish/PhotoFinishGame.js';
