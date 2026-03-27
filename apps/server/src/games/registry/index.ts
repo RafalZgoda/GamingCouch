@@ -54,3 +54,5 @@ import '../mapattack/MapAttackGame.js';
 import '../oddoneout/OddOneOutGame.js';
 import '../emojistory/EmojiStoryGame.js';
 import '../photofinish/PhotoFinishGame.js';
+import '../soundbites/SoundBitesGame.js';
+import '../rankinggame/RankingGame.js';
