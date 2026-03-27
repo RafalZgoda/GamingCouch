@@ -48,3 +48,5 @@ import '../stackattack/StackAttackGame.js';
 import '../freezedance/FreezeDanceGame.js';
 import '../combochain/ComboChainGame.js';
 import '../brokentelephone/BrokenTelephoneGame.js';
+import '../beatdrop/BeatDropGame.js';
+import '../bidorbust/BidOrBustGame.js';

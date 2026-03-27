@@ -594,6 +594,49 @@ interface FlagQuizData {
   playerGuesses: Record<string, number>;
 }
 
+// Beat Drop data shape
+interface BeatDropData {
+  round: number;
+  totalRounds: number;
+  phase: 'place' | 'playback' | 'vote' | 'reveal';
+  beatsPerBar: number;
+  grid: Array<Array<{ playerId: string; sound: string }>>;
+  activePlayerId: string | null;
+  placeMs: number;
+  playbackMs: number;
+  voteMs: number;
+  playbackBeatIndex: number;
+  roundPlacements: Record<string, Array<{ beat: number; sound: string }>>;
+  placedThisRound: string[];
+  votedPlayerIds: string[];
+  votes: Record<string, string>;
+  voteResults: Record<string, number>;
+  roundMVP: string | null;
+  turnOrder: string[];
+  turnIndex: number;
+  soundLabels: Record<string, string>;
+  soundColors: Record<string, string>;
+}
+
+// Bid or Bust data shape
+interface BidOrBustData {
+  round: number;
+  totalRounds: number;
+  phase: 'bid' | 'reveal';
+  prompt: string;
+  category: string;
+  unit: string;
+  ranges: string[];
+  bidMs: number;
+  bidderIds: string[];
+  actualValue: number | null;
+  playerBids: Record<string, number>;
+  playerBidLabels: Record<string, string>;
+  closestPlayerId: string | null;
+  exactPlayerIds: string[];
+  bustPlayerIds: string[];
+}
+
 // Combo Chain data shape
 interface ComboChainData {
   round: number;
@@ -712,6 +755,8 @@ const GAME_LABELS: Record<string, string> = {
   freezedance: '💃 Freeze Dance',
   combochain: '🔗 Combo Chain',
   brokentelephone: '📞 Broken Telephone',
+  beatdrop: '🎵 Beat Drop',
+  bidorbust: '💸 Bid or Bust',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2675,6 +2720,14 @@ function GameView({
 
   if (gameId === 'brokentelephone' && gameState) {
     return <BrokenTelephoneHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'beatdrop' && gameState) {
+    return <BeatDropHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'bidorbust' && gameState) {
+    return <BidOrBustHostView state={gameState} players={players} />;
   }
 
   return (
@@ -6364,6 +6417,240 @@ function BrokenTelephoneHostView({ state, players }: { state: GameState; players
   );
 }
 
+// ── Beat Drop Host View ───────────────────────────────────────────────────────
+
+function BeatDropHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as BeatDropData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const activePlayer = nonHostPlayers.find((p) => p.id === data.activePlayerId);
+
+  const phaseLabel = data.phase === 'place' ? 'Add Your Sounds!' : data.phase === 'playback' ? 'Listen to the Beat!' : data.phase === 'vote' ? 'Vote for MVP!' : 'Results';
+  const phaseColor = data.phase === 'place' ? '#f59e0b' : data.phase === 'playback' ? '#22c55e' : data.phase === 'vote' ? '#8b5cf6' : '#ec4899';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#8b5cf6', borderRadius: 4, transition: 'width 0.3s' }} />
+        </div>
+        <span style={{ fontSize: '1.5rem' }}>🎵</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+
+        <h2 style={{ fontSize: '2rem', fontWeight: 800, color: phaseColor }}>{phaseLabel}</h2>
+
+        {data.phase === 'place' && activePlayer && (
+          <p style={{ fontSize: '1.2rem', color: '#a78bfa' }}>
+            <span style={{ color: AVATAR_COLOR_HEX[activePlayer.avatarColor], fontWeight: 700 }}>{activePlayer.name}</span>&apos;s turn
+          </p>
+        )}
+
+        {/* Beat grid visualization */}
+        <div style={{ display: 'flex', gap: '4px', padding: '1rem', background: '#111127', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+          {data.grid.map((slot, beatIdx) => (
+            <div key={beatIdx} style={{
+              width: 48, minHeight: 80, borderRadius: 6,
+              background: data.phase === 'playback' && data.playbackBeatIndex === beatIdx ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.03)',
+              border: data.phase === 'playback' && data.playbackBeatIndex === beatIdx ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.06)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', padding: '4px',
+              transition: 'all 0.15s',
+            }}>
+              {slot.map((s, i) => (
+                <div key={i} style={{
+                  width: 36, height: 16, borderRadius: 4,
+                  background: data.soundColors[s.sound] ?? '#666',
+                  fontSize: '0.55rem', fontWeight: 700, color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {(data.soundLabels[s.sound] ?? s.sound).split(' ')[0]}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {/* Sound legend */}
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {['A', 'B', 'C', 'D'].map((s) => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: data.soundColors[s] ?? '#666' }} />
+              <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>{data.soundLabels[s]}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Vote phase: show player options */}
+        {data.phase === 'vote' && (
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {data.turnOrder.map((pid, i) => {
+              const p = nonHostPlayers.find((pl) => pl.id === pid);
+              if (!p) return null;
+              const isMVP = data.roundMVP === pid;
+              const voteCount = data.voteResults[pid] ?? 0;
+              return (
+                <div key={pid} style={{
+                  padding: '1rem', borderRadius: 12, textAlign: 'center',
+                  background: isMVP ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.05)',
+                  border: `2px solid ${ANSWER_COLORS[i] ?? '#666'}44`,
+                  minWidth: 80,
+                }}>
+                  <span style={{ fontWeight: 800, color: ANSWER_COLORS[i], fontSize: '0.85rem' }}>{ANSWER_LABELS[i]}</span>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], margin: '0.5rem auto' }} />
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+                  {data.phase === 'vote' && voteCount > 0 && (
+                    <p style={{ fontSize: '0.7rem', color: '#8b5cf6' }}>{voteCount} votes</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Reveal: MVP */}
+        {data.phase === 'reveal' && data.roundMVP && (
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Round MVP</p>
+            <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#8b5cf6' }}>
+              {nonHostPlayers.find((p) => p.id === data.roundMVP)?.name ?? 'Unknown'}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Scoreboard */}
+      <div style={{ display: 'flex', gap: '1.5rem', padding: '1rem 2rem', justifyContent: 'center', background: 'rgba(15,15,26,0.8)' }}>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#8b5cf6' : '#6b7280' }}>#{i + 1}</span>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Bid or Bust Host View ─────────────────────────────────────────────────────
+
+function BidOrBustHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as BidOrBustData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const isReveal = data.phase === 'reveal';
+  const timerFraction = data.bidMs / 10_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Main area */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+            Round {data.round} / {data.totalRounds}
+          </span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#7c2d12', color: '#fb923c' }}>
+            {data.category}
+          </span>
+          <div style={{ flex: 1, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#f59e0b', borderRadius: 4, transition: 'width 0.3s' }} />
+          </div>
+          {!isReveal && (
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: timerColor, minWidth: 48, textAlign: 'right' }}>
+              {Math.ceil(data.bidMs / 1000)}s
+            </span>
+          )}
+        </div>
+
+        {/* Timer bar */}
+        {!isReveal && (
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+          </div>
+        )}
+
+        {/* Prompt + options */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+          <h1 style={{ fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', fontWeight: 900, textAlign: 'center', color: '#f0f0ff', maxWidth: 800 }}>
+            {data.prompt}
+          </h1>
+
+          {isReveal && data.actualValue !== null && (
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ color: '#6b7280', fontSize: '0.85rem' }}>Actual Answer</p>
+              <p style={{ fontSize: '3rem', fontWeight: 900, color: '#22c55e' }}>
+                {data.actualValue.toLocaleString()} {data.unit}
+              </p>
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 700 }}>
+            {data.ranges.map((range, i) => {
+              const color = ANSWER_COLORS[i]!;
+              const isClosest = isReveal && data.closestPlayerId && data.playerBids[data.closestPlayerId] === i;
+              const isExact = isReveal && data.exactPlayerIds.some((pid) => data.playerBids[pid] === i);
+              const isBust = isReveal && data.bustPlayerIds.some((pid) => data.playerBids[pid] === i);
+              let bg = '#1a1a2e';
+              let border = `2px solid ${color}44`;
+              if (isReveal) {
+                if (isExact) { bg = 'rgba(34,197,94,0.2)'; border = '2px solid #22c55e'; }
+                else if (isClosest) { bg = `${color}22`; border = `2px solid ${color}`; }
+                else if (isBust) { bg = 'rgba(239,68,68,0.15)'; border = '2px solid #ef444466'; }
+              }
+              return (
+                <div key={i} style={{ padding: '1.25rem', borderRadius: 12, background: bg, border, textAlign: 'center', transition: 'all 0.3s' }}>
+                  <span style={{ fontWeight: 800, color, fontSize: '0.85rem' }}>{ANSWER_LABELS[i]}</span>
+                  <p style={{ fontWeight: 700, fontSize: '1.5rem', color: '#f0f0ff', marginTop: '0.3rem' }}>{range}</p>
+                  {isReveal && isBust && <p style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 700 }}>BUST!</p>}
+                  {isReveal && isExact && <p style={{ fontSize: '0.75rem', color: '#22c55e', fontWeight: 700 }}>EXACT!</p>}
+                  {isReveal && isClosest && !isExact && <p style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 700 }}>CLOSEST!</p>}
+                </div>
+              );
+            })}
+          </div>
+
+          {!isReveal && (
+            <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>
+              {data.bidderIds.length} / {nonHostPlayers.length} bid
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar scoreboard */}
+      <div style={{ background: '#111127', borderLeft: '1px solid rgba(255,255,255,0.06)', padding: '1.5rem 1rem', overflowY: 'auto' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '1rem' }}>Scoreboard</h3>
+        {sorted.map((p, i) => {
+          const isBust = data.bustPlayerIds.includes(p.id);
+          const isExact = data.exactPlayerIds.includes(p.id);
+          return (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#f59e0b' : '#6b7280', width: 20 }}>#{i + 1}</span>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff', flex: 1 }}>{p.name}</span>
+              {isReveal && isExact && <span style={{ fontSize: '0.65rem', color: '#22c55e' }}>EXACT</span>}
+              {isReveal && isBust && <span style={{ fontSize: '0.65rem', color: '#ef4444' }}>BUST</span>}
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -6378,7 +6665,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance' | 'combochain' | 'brokentelephone'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance' | 'combochain' | 'brokentelephone' | 'beatdrop' | 'bidorbust'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -6700,7 +6987,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz', 'stackattack', 'freezedance', 'combochain', 'brokentelephone'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz', 'stackattack', 'freezedance', 'combochain', 'brokentelephone', 'beatdrop', 'bidorbust'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
