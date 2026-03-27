@@ -44,3 +44,5 @@ import '../spotthediff/SpotTheDiffGame.js';
 import '../mimetime/MimeTimeGame.js';
 import '../twotruths/TwoTruthsGame.js';
 import '../flagquiz/FlagQuizGame.js';
+import '../stackattack/StackAttackGame.js';
+import '../freezedance/FreezeDanceGame.js';

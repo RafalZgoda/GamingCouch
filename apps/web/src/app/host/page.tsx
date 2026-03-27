@@ -594,6 +594,42 @@ interface FlagQuizData {
   playerGuesses: Record<string, number>;
 }
 
+// Stack Attack data shape
+interface StackAttackData {
+  round: number;
+  totalRounds: number;
+  phase: 'moving' | 'reveal';
+  arenaWidth: number;
+  blockHeight: number;
+  tower: Array<{ x: number; width: number }>;
+  movingX: number;
+  movingWidth: number;
+  movingDirection: 1 | -1;
+  speed: number;
+  placedPlayerIds: string[];
+  playerTowers: Record<string, Array<{ x: number; width: number }>>;
+  playerMovingX: Record<string, number>;
+  playerPlaced: Record<string, boolean>;
+  playerEliminated: string[];
+  alivePlayers: string[];
+}
+
+// Freeze Dance data shape
+interface FreezeDanceData {
+  round: number;
+  totalRounds: number;
+  phase: 'dance' | 'freeze' | 'reveal';
+  danceMs: number;
+  freezeMs: number;
+  beatIndex: number;
+  playerTaps: Record<string, number>;
+  frozenTappers: string[];
+  survivors: string[];
+  eliminated: string[];
+  lives: Record<string, number>;
+  alivePlayers: string[];
+}
+
 const GAME_LABELS: Record<string, string> = {
   trivia: '🧠 Trivia',
   reaction: '⚡ Reaction',
@@ -634,6 +670,8 @@ const GAME_LABELS: Record<string, string> = {
   mimetime: '🎭 Mime Time',
   twotruths: '🤥 Two Truths One Lie',
   flagquiz: '🏴 Flag & Symbol Quiz',
+  stackattack: '🧱 Stack Attack',
+  freezedance: '💃 Freeze Dance',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2581,6 +2619,14 @@ function GameView({
 
   if (gameId === 'flagquiz' && gameState) {
     return <FlagQuizHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'stackattack' && gameState) {
+    return <StackAttackHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'freezedance' && gameState) {
+    return <FreezeDanceHostView state={gameState} players={players} />;
   }
 
   return (
@@ -5845,6 +5891,204 @@ function RetroPongHostView({ state, players }: { state: GameState; players: Play
   );
 }
 
+// ── Stack Attack Host View ────────────────────────────────────────────────────
+
+function StackAttackHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as StackAttackData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#f59e0b', borderRadius: 4, transition: 'width 0.3s' }} />
+        </div>
+        <span style={{ fontSize: '0.85rem', color: '#22c55e', fontWeight: 600 }}>
+          {data.alivePlayers.length} alive
+        </span>
+        <span style={{ fontSize: '1.5rem' }}>🧱</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+
+        {data.phase === 'moving' && (
+          <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#f59e0b' }}>TAP to drop your block!</h2>
+        )}
+        {data.phase === 'reveal' && (
+          <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#22c55e' }}>Blocks placed!</h2>
+        )}
+
+        {/* Player towers side by side */}
+        <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {nonHostPlayers.map((p) => {
+            const tower = data.playerTowers[p.id] ?? [];
+            const isAlive = data.alivePlayers.includes(p.id);
+            const placed = data.playerPlaced[p.id] ?? false;
+            const movX = data.playerMovingX[p.id] ?? 0;
+            const topBlock = tower[tower.length - 1];
+            const movW = topBlock?.width ?? 200;
+
+            return (
+              <div key={p.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', opacity: isAlive ? 1 : 0.3 }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: AVATAR_COLOR_HEX[p.avatarColor] }}>{p.name}</span>
+                <div style={{ position: 'relative', width: 120, height: 200, background: '#111127', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {/* Render tower blocks */}
+                  {tower.map((block, i) => (
+                    <div key={i} style={{
+                      position: 'absolute',
+                      bottom: i * 12,
+                      left: `${(block.x / data.arenaWidth) * 100}%`,
+                      width: `${(block.width / data.arenaWidth) * 100}%`,
+                      height: 12,
+                      background: `hsl(${(i * 25) % 360}, 70%, 55%)`,
+                      borderRadius: 2,
+                    }} />
+                  ))}
+                  {/* Moving block */}
+                  {isAlive && !placed && data.phase === 'moving' && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: tower.length * 12,
+                      left: `${(movX / data.arenaWidth) * 100}%`,
+                      width: `${(movW / data.arenaWidth) * 100}%`,
+                      height: 12,
+                      background: '#ffffff88',
+                      borderRadius: 2,
+                      border: '1px solid #fff',
+                    }} />
+                  )}
+                </div>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>{state.scores[p.id] ?? 0} pts</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {data.playerEliminated.length > 0 && (
+          <div style={{ fontSize: '0.9rem', color: '#ef4444' }}>
+            Eliminated: {data.playerEliminated.map((id) => nonHostPlayers.find((p) => p.id === id)?.name).filter(Boolean).join(', ')}
+          </div>
+        )}
+      </div>
+
+      {/* Scoreboard */}
+      <div style={{ display: 'flex', gap: '1.5rem', padding: '1rem 2rem', justifyContent: 'center', background: 'rgba(15,15,26,0.8)' }}>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#f59e0b' : '#6b7280' }}>#{i + 1}</span>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Freeze Dance Host View ────────────────────────────────────────────────────
+
+function FreezeDanceHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as FreezeDanceData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+
+  const phaseColors: Record<string, string> = { dance: '#ec4899', freeze: '#3b82f6', reveal: '#22c55e' };
+  const phaseEmojis: Record<string, string> = { dance: '💃', freeze: '🥶', reveal: '✅' };
+  const pulseScale = data.phase === 'dance' ? 1 + (data.beatIndex % 2) * 0.15 : 1;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#ec4899', borderRadius: 4, transition: 'width 0.3s' }} />
+        </div>
+        <span style={{ fontSize: '0.85rem', color: '#22c55e', fontWeight: 600 }}>
+          {data.alivePlayers.length} alive
+        </span>
+        <span style={{ fontSize: '1.5rem' }}>💃</span>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Phase indicator */}
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '5rem', transform: `scale(${pulseScale})`, transition: 'transform 0.15s' }}>
+            {phaseEmojis[data.phase] ?? '💃'}
+          </div>
+          <h2 style={{ fontSize: '2.5rem', fontWeight: 900, color: phaseColors[data.phase] ?? '#fff', textTransform: 'uppercase' }}>
+            {data.phase === 'dance' ? 'DANCE!' : data.phase === 'freeze' ? 'FREEZE!' : 'Results'}
+          </h2>
+          {data.phase === 'dance' && (
+            <p style={{ color: '#9ca3af', fontSize: '1rem' }}>Tap along to the beat!</p>
+          )}
+          {data.phase === 'freeze' && (
+            <p style={{ color: '#ef4444', fontSize: '1.2rem', fontWeight: 700 }}>DON&apos;T TAP!</p>
+          )}
+        </div>
+
+        {/* Players */}
+        <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+          {nonHostPlayers.map((p) => {
+            const isAlive = data.alivePlayers.includes(p.id);
+            const isFrozenTapper = data.frozenTappers.includes(p.id);
+            const taps = data.playerTaps[p.id] ?? 0;
+            const livesLeft = data.lives[p.id] ?? 0;
+
+            return (
+              <div key={p.id} style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem',
+                padding: '1rem', borderRadius: 12,
+                background: isFrozenTapper ? 'rgba(239,68,68,0.15)' : isAlive ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.3)',
+                border: `2px solid ${isFrozenTapper ? '#ef4444' : isAlive ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.03)'}`,
+                opacity: isAlive ? 1 : 0.3,
+                minWidth: 80,
+              }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f0f0ff' }}>{p.name}</span>
+                {data.phase === 'dance' && taps > 0 && (
+                  <span style={{ fontSize: '0.75rem', color: '#ec4899' }}>{taps} taps</span>
+                )}
+                {isFrozenTapper && (
+                  <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 700 }}>CAUGHT!</span>
+                )}
+                <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                  {'❤️'.repeat(Math.max(0, livesLeft))}{'🖤'.repeat(Math.max(0, 3 - livesLeft))}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Scoreboard */}
+      <div style={{ display: 'flex', gap: '1.5rem', padding: '1rem 2rem', justifyContent: 'center', background: 'rgba(15,15,26,0.8)' }}>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#ec4899' : '#6b7280' }}>#{i + 1}</span>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -5859,7 +6103,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -6181,7 +6425,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz', 'stackattack', 'freezedance'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
