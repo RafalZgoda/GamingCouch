@@ -58,3 +58,5 @@ import '../soundbites/SoundBitesGame.js';
 import '../rankinggame/RankingGame.js';
 import '../chainreaction/ChainReactionGame.js';
 import '../timebomb/TimeBombGame.js';
+import '../countdown/CountdownGame.js';
+import '../vibecheck/VibeCheckGame.js';
