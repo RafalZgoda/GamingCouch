@@ -60,3 +60,5 @@ import '../chainreaction/ChainReactionGame.js';
 import '../timebomb/TimeBombGame.js';
 import '../countdown/CountdownGame.js';
 import '../vibecheck/VibeCheckGame.js';
+import '../closestguess/ClosestGuessGame.js';
+import '../blitzquiz/BlitzQuizGame.js';
