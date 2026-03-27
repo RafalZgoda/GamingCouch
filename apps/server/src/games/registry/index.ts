@@ -46,3 +46,5 @@ import '../twotruths/TwoTruthsGame.js';
 import '../flagquiz/FlagQuizGame.js';
 import '../stackattack/StackAttackGame.js';
 import '../freezedance/FreezeDanceGame.js';
+import '../combochain/ComboChainGame.js';
+import '../brokentelephone/BrokenTelephoneGame.js';

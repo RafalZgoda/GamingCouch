@@ -594,6 +594,44 @@ interface FlagQuizData {
   playerGuesses: Record<string, number>;
 }
 
+// Combo Chain data shape
+interface ComboChainData {
+  round: number;
+  totalRounds: number;
+  phase: 'pick' | 'reveal';
+  ruleName: string;
+  ruleDescription: string;
+  chain: string[];
+  currentWord: string;
+  options: string[];
+  pickMs: number;
+  pickedPlayerIds: string[];
+  correctIndex: number | null;
+  playerPicks: Record<string, number>;
+  correctPlayerIds: string[];
+  chainLength: number;
+}
+
+// Broken Telephone data shape
+interface BrokenTelephoneData {
+  round: number;
+  totalRounds: number;
+  phase: 'pick_drawing' | 'pick_phrase' | 'reveal';
+  category: string;
+  originalPhrase: string | null;
+  promptPhrase: string | null;
+  drawingOptions: string[];
+  promptDrawing: string | null;
+  phraseOptions: string[];
+  pickMs: number;
+  pickedPlayerIds: string[];
+  correctIndex: number | null;
+  playerPicks: Record<string, number>;
+  correctPlayerIds: string[];
+  chosenDrawing: string | null;
+  chosenPhrase: string | null;
+}
+
 // Stack Attack data shape
 interface StackAttackData {
   round: number;
@@ -672,6 +710,8 @@ const GAME_LABELS: Record<string, string> = {
   flagquiz: '🏴 Flag & Symbol Quiz',
   stackattack: '🧱 Stack Attack',
   freezedance: '💃 Freeze Dance',
+  combochain: '🔗 Combo Chain',
+  brokentelephone: '📞 Broken Telephone',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2627,6 +2667,14 @@ function GameView({
 
   if (gameId === 'freezedance' && gameState) {
     return <FreezeDanceHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'combochain' && gameState) {
+    return <ComboChainHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'brokentelephone' && gameState) {
+    return <BrokenTelephoneHostView state={gameState} players={players} />;
   }
 
   return (
@@ -6089,6 +6137,233 @@ function FreezeDanceHostView({ state, players }: { state: GameState; players: Pl
   );
 }
 
+// ── Combo Chain Host View ──────────────────────────────────────────────────────
+
+function ComboChainHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as ComboChainData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const isReveal = data.phase === 'reveal';
+  const timerFraction = data.pickMs / 8_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Main area */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+            Round {data.round} / {data.totalRounds}
+          </span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#312e81', color: '#818cf8' }}>
+            {data.ruleName}
+          </span>
+          <div style={{ flex: 1, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#6366f1', borderRadius: 4, transition: 'width 0.3s' }} />
+          </div>
+          {!isReveal && (
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: timerColor, minWidth: 48, textAlign: 'right' }}>
+              {Math.ceil(data.pickMs / 1000)}s
+            </span>
+          )}
+        </div>
+
+        {/* Timer bar */}
+        {!isReveal && (
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+          </div>
+        )}
+
+        {/* Chain visualization */}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', padding: '0.5rem' }}>
+          {data.chain.map((word, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {i > 0 && <span style={{ color: '#4b5563', fontSize: '1.2rem' }}>→</span>}
+              <span style={{ padding: '0.4rem 0.8rem', borderRadius: 8, background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.3)', color: '#a5b4fc', fontWeight: 700, fontSize: '1rem' }}>
+                {word}
+              </span>
+            </div>
+          ))}
+          {!isReveal && <span style={{ color: '#4b5563', fontSize: '1.2rem' }}>→ ?</span>}
+        </div>
+
+        {/* Rule description */}
+        <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '0.9rem' }}>{data.ruleDescription}</p>
+
+        {/* Current word + options */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 900, color: '#f0f0ff' }}>{data.currentWord}</h1>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 700 }}>
+            {data.options.map((option, i) => {
+              const color = ANSWER_COLORS[i]!;
+              const isCorrect = isReveal && data.correctIndex === i;
+              let bg = '#1a1a2e';
+              let border = `2px solid ${color}44`;
+              let opacity = 1;
+              if (isReveal) {
+                if (isCorrect) { bg = `${color}33`; border = `2px solid ${color}`; }
+                else { opacity = 0.4; }
+              }
+              return (
+                <div key={i} style={{ padding: '1rem', borderRadius: 12, background: bg, border, opacity, textAlign: 'center', transition: 'all 0.3s' }}>
+                  <span style={{ fontWeight: 800, color, fontSize: '0.85rem' }}>{ANSWER_LABELS[i]}</span>
+                  <p style={{ fontWeight: 700, fontSize: '1.2rem', color: '#f0f0ff', marginTop: '0.3rem' }}>{option}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar scoreboard */}
+      <div style={{ background: '#111127', borderLeft: '1px solid rgba(255,255,255,0.06)', padding: '1.5rem 1rem', overflowY: 'auto' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '1rem' }}>Scoreboard</h3>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#f59e0b' : '#6b7280', width: 20 }}>#{i + 1}</span>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff', flex: 1 }}>{p.name}</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Broken Telephone Host View ────────────────────────────────────────────────
+
+function BrokenTelephoneHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as BrokenTelephoneData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const isReveal = data.phase === 'reveal';
+  const timerFraction = data.pickMs / 10_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+          Round {data.round} / {data.totalRounds}
+        </span>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#7c2d12', color: '#fb923c' }}>
+          {data.category}
+        </span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#f97316', borderRadius: 4, transition: 'width 0.3s' }} />
+        </div>
+        {!isReveal && (
+          <span style={{ fontSize: '1.5rem', fontWeight: 900, color: timerColor, minWidth: 48, textAlign: 'right' }}>
+            {Math.ceil(data.pickMs / 1000)}s
+          </span>
+        )}
+        <span style={{ fontSize: '1.5rem' }}>📞</span>
+      </div>
+
+      {/* Timer bar */}
+      {!isReveal && (
+        <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden', margin: '0 2rem', flexShrink: 0 }}>
+          <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+        </div>
+      )}
+
+      {/* Main */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+
+        {/* Step 1: Pick drawing for phrase */}
+        {data.phase === 'pick_drawing' && data.promptPhrase && (
+          <>
+            <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>Which drawing represents this phrase?</p>
+            <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#f0f0ff', textAlign: 'center' }}>&quot;{data.promptPhrase}&quot;</h1>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', maxWidth: 600 }}>
+              {data.drawingOptions.map((emoji, i) => (
+                <div key={i} style={{ padding: '1.5rem', borderRadius: 16, background: '#1a1a2e', border: `2px solid ${ANSWER_COLORS[i]}44`, textAlign: 'center' }}>
+                  <span style={{ fontWeight: 800, color: ANSWER_COLORS[i], fontSize: '0.85rem' }}>{ANSWER_LABELS[i]}</span>
+                  <p style={{ fontSize: '3rem', marginTop: '0.5rem' }}>{emoji}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Step 2: Pick phrase for drawing */}
+        {data.phase === 'pick_phrase' && data.promptDrawing && (
+          <>
+            <p style={{ color: '#9ca3af', fontSize: '0.9rem' }}>What does this drawing mean?</p>
+            <div style={{ fontSize: '5rem', padding: '1rem 2rem', background: '#1a1a2e', borderRadius: 16, border: '2px solid rgba(249,115,22,0.3)' }}>
+              {data.promptDrawing}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', maxWidth: 700, width: '100%' }}>
+              {data.phraseOptions.map((phrase, i) => (
+                <div key={i} style={{ padding: '1rem', borderRadius: 12, background: '#1a1a2e', border: `2px solid ${ANSWER_COLORS[i]}44`, textAlign: 'center' }}>
+                  <span style={{ fontWeight: 800, color: ANSWER_COLORS[i], fontSize: '0.85rem' }}>{ANSWER_LABELS[i]}</span>
+                  <p style={{ fontWeight: 700, fontSize: '1rem', color: '#f0f0ff', marginTop: '0.3rem' }}>{phrase}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Reveal: show the chain */}
+        {isReveal && (
+          <>
+            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f97316' }}>The Telephone Chain</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>Original</p>
+                <p style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f0f0ff' }}>&quot;{data.originalPhrase}&quot;</p>
+              </div>
+              <span style={{ fontSize: '2rem', color: '#4b5563' }}>→</span>
+              {data.chosenDrawing && (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>Drawing</p>
+                  <p style={{ fontSize: '3rem' }}>{data.chosenDrawing}</p>
+                </div>
+              )}
+              <span style={{ fontSize: '2rem', color: '#4b5563' }}>→</span>
+              {data.chosenPhrase && (
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ color: '#6b7280', fontSize: '0.75rem' }}>Final</p>
+                  <p style={{ fontSize: '1.2rem', fontWeight: 700, color: data.chosenPhrase === data.originalPhrase ? '#22c55e' : '#ef4444' }}>
+                    &quot;{data.chosenPhrase}&quot;
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Answered count */}
+        {!isReveal && (
+          <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>
+            {data.pickedPlayerIds.length} / {nonHostPlayers.length} answered
+          </p>
+        )}
+      </div>
+
+      {/* Scoreboard */}
+      <div style={{ display: 'flex', gap: '1.5rem', padding: '1rem 2rem', justifyContent: 'center', background: 'rgba(15,15,26,0.8)' }}>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#f97316' : '#6b7280' }}>#{i + 1}</span>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -6103,7 +6378,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance' | 'combochain' | 'brokentelephone'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -6425,7 +6700,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz', 'stackattack', 'freezedance'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz', 'stackattack', 'freezedance', 'combochain', 'brokentelephone'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
