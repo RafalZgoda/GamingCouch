@@ -43,3 +43,4 @@ import '../hotseat/HotSeatGame.js';
 import '../spotthediff/SpotTheDiffGame.js';
 import '../mimetime/MimeTimeGame.js';
 import '../twotruths/TwoTruthsGame.js';
+import '../flagquiz/FlagQuizGame.js';
