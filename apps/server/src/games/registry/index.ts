@@ -50,3 +50,5 @@ import '../combochain/ComboChainGame.js';
 import '../brokentelephone/BrokenTelephoneGame.js';
 import '../beatdrop/BeatDropGame.js';
 import '../bidorbust/BidOrBustGame.js';
+import '../mapattack/MapAttackGame.js';
+import '../oddoneout/OddOneOutGame.js';

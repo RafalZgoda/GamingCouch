@@ -594,6 +594,37 @@ interface FlagQuizData {
   playerGuesses: Record<string, number>;
 }
 
+// Map Attack data shape
+interface MapAttackData {
+  round: number;
+  totalRounds: number;
+  phase: 'guess' | 'reveal';
+  emoji: string;
+  prompt: string;
+  category: string;
+  options: string[];
+  guessMs: number;
+  guessedPlayerIds: string[];
+  correctIndex: number | null;
+  correctAnswer: string | null;
+  playerGuesses: Record<string, number>;
+}
+
+// Odd One Out data shape
+interface OddOneOutData {
+  round: number;
+  totalRounds: number;
+  phase: 'guess' | 'reveal';
+  category: string;
+  items: string[];
+  guessMs: number;
+  guessedPlayerIds: string[];
+  oddIndex: number | null;
+  explanation: string | null;
+  playerGuesses: Record<string, number>;
+  correctPlayerIds: string[];
+}
+
 // Beat Drop data shape
 interface BeatDropData {
   round: number;
@@ -757,6 +788,8 @@ const GAME_LABELS: Record<string, string> = {
   brokentelephone: '📞 Broken Telephone',
   beatdrop: '🎵 Beat Drop',
   bidorbust: '💸 Bid or Bust',
+  mapattack: '🌍 Map Attack',
+  oddoneout: '❓ Odd One Out',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -2728,6 +2761,14 @@ function GameView({
 
   if (gameId === 'bidorbust' && gameState) {
     return <BidOrBustHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'mapattack' && gameState) {
+    return <MapAttackHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'oddoneout' && gameState) {
+    return <OddOneOutHostView state={gameState} players={players} />;
   }
 
   return (
@@ -6651,6 +6692,185 @@ function BidOrBustHostView({ state, players }: { state: GameState; players: Play
   );
 }
 
+// ── Map Attack Host View ──────────────────────────────────────────────────────
+
+function MapAttackHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as MapAttackData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const isReveal = data.phase === 'reveal';
+  const timerFraction = data.guessMs / 10_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Main area */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+            Q{data.round} / {data.totalRounds}
+          </span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '0.2rem 0.6rem', borderRadius: '9999px', background: '#14532d', color: '#22c55e', textTransform: 'capitalize' }}>
+            {data.category}
+          </span>
+          <div style={{ flex: 1, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#22c55e', borderRadius: 4, transition: 'width 0.3s' }} />
+          </div>
+          {!isReveal && (
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: timerColor, minWidth: 48, textAlign: 'right' }}>
+              {Math.ceil(data.guessMs / 1000)}s
+            </span>
+          )}
+        </div>
+
+        {!isReveal && (
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+          </div>
+        )}
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+          <div style={{ fontSize: '5rem' }}>{data.emoji}</div>
+          <h1 style={{ fontSize: 'clamp(1.3rem, 3vw, 2.2rem)', fontWeight: 900, textAlign: 'center', color: '#f0f0ff', maxWidth: 800 }}>
+            {data.prompt}
+          </h1>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 700 }}>
+            {data.options.map((option, i) => {
+              const color = ANSWER_COLORS[i]!;
+              const isCorrect = isReveal && data.correctIndex === i;
+              let bg = '#1a1a2e';
+              let border = `2px solid ${color}44`;
+              let opacity = 1;
+              if (isReveal) {
+                if (isCorrect) { bg = `${color}33`; border = `2px solid ${color}`; }
+                else { opacity = 0.4; }
+              }
+              return (
+                <div key={i} style={{ padding: '1rem', borderRadius: 12, background: bg, border, opacity, textAlign: 'center', transition: 'all 0.3s' }}>
+                  <span style={{ fontWeight: 800, color, fontSize: '0.85rem' }}>{ANSWER_LABELS[i]}</span>
+                  <p style={{ fontWeight: 700, fontSize: '1.2rem', color: '#f0f0ff', marginTop: '0.3rem' }}>{option}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {!isReveal && (
+            <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>
+              {data.guessedPlayerIds.length} / {nonHostPlayers.length} answered
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <div style={{ background: '#111127', borderLeft: '1px solid rgba(255,255,255,0.06)', padding: '1.5rem 1rem', overflowY: 'auto' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '1rem' }}>Scoreboard</h3>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#22c55e' : '#6b7280', width: 20 }}>#{i + 1}</span>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff', flex: 1 }}>{p.name}</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Odd One Out Host View ─────────────────────────────────────────────────────
+
+function OddOneOutHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as OddOneOutData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const isReveal = data.phase === 'reveal';
+  const timerFraction = data.guessMs / 8_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+
+      {/* Main area */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '2rem', gap: '1.5rem', overflow: 'hidden' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+          <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>
+            Round {data.round} / {data.totalRounds}
+          </span>
+          <div style={{ flex: 1, height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#f97316', borderRadius: 4, transition: 'width 0.3s' }} />
+          </div>
+          {!isReveal && (
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: timerColor, minWidth: 48, textAlign: 'right' }}>
+              {Math.ceil(data.guessMs / 1000)}s
+            </span>
+          )}
+        </div>
+
+        {!isReveal && (
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+          </div>
+        )}
+
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ fontSize: '0.9rem', color: '#9ca3af', marginBottom: '0.5rem' }}>Category hint: <strong style={{ color: '#f97316' }}>{data.category}</strong></p>
+            <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#f0f0ff' }}>Which one doesn&apos;t belong?</h1>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', width: '100%', maxWidth: 700 }}>
+            {data.items.map((item, i) => {
+              const color = ANSWER_COLORS[i]!;
+              const isOdd = isReveal && data.oddIndex === i;
+              let bg = '#1a1a2e';
+              let border = `2px solid ${color}44`;
+              if (isReveal) {
+                if (isOdd) { bg = 'rgba(239,68,68,0.2)'; border = '2px solid #ef4444'; }
+                else { bg = 'rgba(34,197,94,0.1)'; border = '2px solid rgba(34,197,94,0.3)'; }
+              }
+              return (
+                <div key={i} style={{ padding: '1.5rem', borderRadius: 16, background: bg, border, textAlign: 'center', transition: 'all 0.3s' }}>
+                  <span style={{ fontWeight: 800, color, fontSize: '0.85rem' }}>{ANSWER_LABELS[i]}</span>
+                  <p style={{ fontWeight: 800, fontSize: '1.5rem', color: '#f0f0ff', marginTop: '0.5rem' }}>{item}</p>
+                  {isReveal && isOdd && <p style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 700, marginTop: '0.3rem' }}>ODD ONE OUT!</p>}
+                </div>
+              );
+            })}
+          </div>
+
+          {isReveal && data.explanation && (
+            <p style={{ color: '#9ca3af', fontSize: '1rem', fontStyle: 'italic' }}>{data.explanation}</p>
+          )}
+
+          {!isReveal && (
+            <p style={{ color: '#4b5563', fontSize: '0.85rem' }}>
+              {data.guessedPlayerIds.length} / {nonHostPlayers.length} answered
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <div style={{ background: '#111127', borderLeft: '1px solid rgba(255,255,255,0.06)', padding: '1.5rem 1rem', overflowY: 'auto' }}>
+        <h3 style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: '1rem' }}>Scoreboard</h3>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#f97316' : '#6b7280', width: 20 }}>#{i + 1}</span>
+            <div style={{ width: 24, height: 24, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor], flexShrink: 0 }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff', flex: 1 }}>{p.name}</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#a78bfa' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -6665,7 +6885,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance' | 'combochain' | 'brokentelephone' | 'beatdrop' | 'bidorbust'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance' | 'combochain' | 'brokentelephone' | 'beatdrop' | 'bidorbust' | 'mapattack' | 'oddoneout'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
@@ -6987,7 +7207,7 @@ export default function HostPage() {
           {/* ── Game picker ── */}
           <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem', paddingTop: '0.5rem' }}>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz', 'stackattack', 'freezedance', 'combochain', 'brokentelephone', 'beatdrop', 'bidorbust'] as const).map((g) => (
+              {(['trivia', 'reaction', 'colormatch', 'mathrace', 'wordscramble', 'hotpotato', 'trueorfalse', 'tapfrenzy', 'blindtest', 'neverhaveiever', 'colorflash', 'wouldyourather', 'luckynumber', 'retropong', 'emojidecoder', 'tugofwar', 'simonsays', 'debateclub', 'categorysprint', 'auctionhouse', 'rps', 'bombdefuse', 'whackamole', 'floorislava', 'buttonmash', 'dodgeball', 'priceisright', 'spinthewheel', 'copycatchain', 'factorcap', 'matchmadness', 'hotseat', 'spotthediff', 'mimetime', 'twotruths', 'flagquiz', 'stackattack', 'freezedance', 'combochain', 'brokentelephone', 'beatdrop', 'bidorbust', 'mapattack', 'oddoneout'] as const).map((g) => (
                 <button
                   key={g}
                   onClick={() => setSelectedGame(g)}
