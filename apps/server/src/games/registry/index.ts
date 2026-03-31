@@ -64,3 +64,5 @@ import '../closestguess/ClosestGuessGame.js';
 import '../blitzquiz/BlitzQuizGame.js';
 import '../synonymsprint/SynonymSprintGame.js';
 import '../dangerzone/DangerZoneGame.js';
+import '../patternmemory/PatternMemoryGame.js';
+import '../wantitmore/WantItMoreGame.js';
