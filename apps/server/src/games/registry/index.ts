@@ -70,3 +70,5 @@ import '../spellbee/SpellBeeGame.js';
 import '../snapjudge/SnapJudgeGame.js';
 import '../guesstheyear/GuessTheYearGame.js';
 import '../alphabetrace/AlphabetRaceGame.js';
+import '../top5/Top5Game.js';
+import '../spotthefake/SpotTheFakeGame.js';
