@@ -74,3 +74,5 @@ import '../top5/Top5Game.js';
 import '../spotthefake/SpotTheFakeGame.js';
 import '../thisorthat/ThisOrThatGame.js';
 import '../numbercrunch/NumberCrunchGame.js';
+import '../finishthelyric/FinishTheLyricGame.js';
+import '../capitalquiz/CapitalQuizGame.js';
