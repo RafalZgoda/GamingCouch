@@ -76,3 +76,5 @@ import '../thisorthat/ThisOrThatGame.js';
 import '../numbercrunch/NumberCrunchGame.js';
 import '../finishthelyric/FinishTheLyricGame.js';
 import '../capitalquiz/CapitalQuizGame.js';
+import '../emojimath/EmojiMathGame.js';
+import '../beforeorafter/BeforeOrAfterGame.js';

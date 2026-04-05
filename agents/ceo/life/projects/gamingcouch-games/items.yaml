@@ -1,0 +1,784 @@
+# GamingCouch Game Ideas — Brainstorm Log
+# Each heartbeat adds new ideas. Status: idea | approved | in_dev | shipped | rejected
+
+- id: idea-001
+  name: "Draw & Guess (Pictionary-style)"
+  description: "One player draws on their phone (finger on screen), others guess from 4 text options on TV. Hilarious bad drawings. Timer pressure."
+  why_fun: "Bad drawings are universally funny. Low skill floor, everyone can play."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  notes: "Would need a drawing canvas on phone — goes beyond 4-button controller. May need a 'free draw' controller layout."
+
+- id: idea-002
+  name: "Bluff / Two Truths One Lie"
+  description: "TV shows 3 statements (submitted by one player or AI-generated). Others vote A/B/C for which is the lie. Points for fooling people & for guessing right."
+  why_fun: "Social deduction, sparks conversation, people learn about each other."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  notes: "Pure 4-button works (A/B/C to vote). Could use pre-written prompts or let players type on phone."
+
+- id: idea-003
+  name: "Sound Guess"
+  description: "TV plays a sound effect or song clip. Players pick from 4 options what it is. Categories: movie quotes, animal sounds, songs, everyday noises."
+  why_fun: "Audio-based variety. Funny when someone confuses a cat with a baby crying."
+  complexity: medium
+  status: shipped
+  added: 2026-03-22
+  notes: "Needs audio asset library. Could crowdsource or use royalty-free sounds."
+
+- id: idea-004
+  name: "Speed Typer / Word Scramble"
+  description: "TV shows scrambled letters. First to unscramble and tap the right answer (4 options) wins the round. Gets harder each round."
+  why_fun: "Competitive word puzzles with time pressure. Accessible to anyone who can read."
+  complexity: low
+  status: idea
+  added: 2026-03-22
+  notes: "Fits perfectly in the 4-button/4-option format. Easy to implement."
+
+- id: idea-005
+  name: "Would You Rather"
+  description: "TV shows a 'Would you rather' dilemma (A or B). Everyone votes. Majority wins points. Minority gets bonus if they can survive 3 rounds in a row as minority."
+  why_fun: "Sparks debates and laughs. Reveals personality. Zero skill barrier."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  notes: "Only needs 2 buttons (A/B). Very easy to build. Great ice-breaker game."
+
+- id: idea-006
+  name: "Emoji Charades"
+  description: "One player sees a movie/song/phrase on their phone. They pick from emojis to describe it (shown on TV). Others guess from 4 text options."
+  why_fun: "Creative emoji combinations are hilarious. Modern twist on charades."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  notes: "Phone player needs emoji selection UI. Others use standard 4-button."
+
+- id: idea-007
+  name: "Hot Potato / Bomb Pass"
+  description: "A virtual bomb ticks on TV. Random trivia or challenge appears. Answer correctly to pass the bomb to next player. Wrong answer = you hold it. Bomb explodes = you lose a life."
+  why_fun: "Tension + pressure + schadenfreude when someone explodes. Classic party mechanic."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  notes: "Adds elimination/lives mechanic. Good variety from pure scoring games."
+
+- id: idea-008
+  name: "Copycat / Simon Says"
+  description: "TV shows a sequence of button presses (colors/directions). Players must repeat it on their phone. Sequence grows each round. Last player standing wins."
+  why_fun: "Simple memory game, gets tense as sequences grow. Everyone knows how to play."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  notes: "Perfect fit for 4-button controller. Classic game mechanic."
+
+- id: idea-009
+  name: "Price is Right / Guess the Number"
+  description: "TV shows an item (product, celebrity age, distance, etc). Players pick from 4 price/number ranges. Closest range wins. Could also do 'higher or lower' variant."
+  why_fun: "People are hilariously bad at estimating. Easy to argue about."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  notes: "Needs a content database of items+values. 4-button works perfectly."
+
+- id: idea-010
+  name: "Rhythm Tap"
+  description: "Music plays, beats are shown on TV like a simplified rhythm game. Players tap buttons in time. Score based on accuracy and timing."
+  why_fun: "Musical, energetic, gets people moving. Works for all skill levels with easy songs."
+  complexity: high
+  status: idea
+  added: 2026-03-22
+  notes: "Needs audio sync and beat mapping. Higher complexity but high reward."
+
+- id: idea-011
+  name: "Spot the Difference"
+  description: "TV shows two nearly identical images side by side. Each difference is labeled A/B/C/D with zones. Players race to tap which zone has a difference. Multiple rounds with increasing subtlety."
+  why_fun: "Visual puzzle everyone understands. Competitive race element. Gets surprisingly heated."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 2
+  notes: "Needs image pairs with known differences. Could generate programmatically or curate. 4-button maps to quadrants."
+
+- id: idea-012
+  name: "Story Builder / Consequences"
+  description: "Players take turns adding to a story. Each turn, player picks from 4 AI-generated continuation options (A/B/C/D). Story builds on TV. Funniest/weirdest story wins by group vote at end."
+  why_fun: "Collaborative absurdity. Stories go off the rails in hilarious ways. No wrong answers."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  heartbeat: 2
+  notes: "Could use AI to generate continuation options based on story so far. Voting round at end for best story moment."
+
+- id: idea-013
+  name: "Mime Time / Act It Out"
+  description: "One player's phone shows a word/phrase. They physically act it out (no talking). Others watch and pick from 4 options on their phone. Timer adds pressure."
+  why_fun: "Gets people off the couch and moving. Physical comedy is universally funny. Classic party game digitized."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 2
+  notes: "Minimal tech needed — phone just shows the prompt to the actor, others vote via 4 buttons. Word database needed."
+
+# --- Heartbeat 3: Inspired by 8Bit Fiesta research (2026-03-22) ---
+
+- id: idea-014
+  name: "Dodge Ball / Survival Tap"
+  description: "TV shows hazards coming from different directions (left/right/top/bottom). Players press the matching direction button (A/B/C/D mapped to directions) to dodge. Speed increases each wave. Last survivor wins."
+  why_fun: "Action/survival game — fills a gap in our quiz-heavy catalog. Rising tension as speed increases. Very 8Bit Fiesta energy."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 3
+  inspiration: "8Bit Fiesta's Lava Dodge and hazard-avoidance minigames"
+  notes: "4 buttons = 4 dodge directions. Simple to implement. Elimination mechanic adds drama. Can show fun pixel animations on TV."
+
+- id: idea-015
+  name: "Button Mash Race"
+  description: "Players race pixel characters across the TV screen by mashing a specific button as fast as possible. Random events (obstacles, power-ups) require switching to a different button mid-race."
+  why_fun: "Pure physical energy — everyone screaming and tapping frantically. 8Bit Fiesta's racing games are a highlight."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 3
+  inspiration: "8Bit Fiesta's racing minigames"
+  notes: "Easy to build. TV shows the race with pixel characters. Phone just needs tap detection + occasional button switch prompts."
+
+- id: idea-016
+  name: "Drinking Roulette / Spin the Wheel"
+  description: "TV shows a spinning wheel with challenges (truth, dare, drink, give a drink, category game, etc). Wheel lands on a player + challenge. That player must complete it or drink. Others vote if they succeeded."
+  why_fun: "Direct drinking game mechanic — 8Bit Fiesta's biggest differentiator is built-in drinking rules. This IS the drinking game."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 3
+  inspiration: "8Bit Fiesta's built-in drinking game mode with difficulty tiers"
+  notes: "Could have Light/Medium/Hardcore modes like 8BF. Very social, low-tech. Voting via 4 buttons. Great ice-breaker."
+
+- id: idea-017
+  name: "Bomb Defuse / Wire Cut"
+  description: "TV shows a ticking bomb with 4 colored wires (A/B/C/D). One random wire is correct. All players must pick simultaneously. Wrong wire = explosion animation + penalty. Right wire = points. Gets faster each round."
+  why_fun: "Gambling tension — pure luck with dramatic presentation. 8BF's random chaos energy applied to a high-stakes choice."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 3
+  inspiration: "8Bit Fiesta's fast-paced elimination and schadenfreude mechanics"
+  notes: "Very easy to build. Heavy on animation/sound for drama. Could combine with drinking mode (wrong wire = drink)."
+
+- id: idea-018
+  name: "Target Tap / Whack-a-Mole"
+  description: "TV shows a 2x2 grid with targets popping up in different quadrants. Each quadrant maps to A/B/C/D. Tap the right button when a target appears in that quadrant. Score based on speed and accuracy."
+  why_fun: "Fast reflexes, visual tracking, competitive scoring. Like 8BF's shooting games but adapted for 4 buttons."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 3
+  inspiration: "8Bit Fiesta's shooting and target-based minigames (Run N Gun, Trigger Box)"
+  notes: "Natural fit for our controller — 4 buttons = 4 zones. Could increase speed and add decoy targets for difficulty."
+
+- id: idea-019
+  name: "Floor is Lava / Platform Jump"
+  description: "TV shows platforms labeled A/B/C/D. Lava rises from below. A safe platform is highlighted briefly, players must press that button to jump there. Wrong platform or too slow = fall in lava. Elimination rounds."
+  why_fun: "Visual spectacle on TV + elimination drama. Directly inspired by 8BF's platformer/lava mechanics but works with our 4-button controller."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 3
+  inspiration: "8Bit Fiesta's Lava Dodge, precision platforming, and elimination format"
+  notes: "Perfect 4-button mapping. Can have fun pixel art lava + character animations. Each round gets faster."
+
+- id: idea-020
+  name: "Copycat Chain"
+  description: "First player presses a button. Next player must repeat it and add one. Chain grows. Miss a beat = eliminated. Like Simon Says but competitive and social."
+  why_fun: "Memory + pressure + everyone watching. Classic mechanic that 8BF proves works in party context."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 3
+  inspiration: "8Bit Fiesta's pattern-based minigames and elimination format"
+  notes: "Evolution of idea-008 (Simon Says) but player-driven sequences instead of computer-generated. More social."
+
+# --- Heartbeat 4: Fresh ideas (2026-03-22) ---
+# Gap analysis: we now have 9 shipped games. Missing: cooperative mechanics, geography, physical/dare, ranking/voting.
+
+- id: idea-021
+  name: "Map Attack / Where is it?"
+  description: "TV shows a zoomed-in or partial map. Players pick which continent/country/city it is from 4 options (A/B/C/D). Zoom out gradually if no one answers. Faster answer = more points."
+  why_fun: "Geography puzzle that feels like a quiz show. The zoom-out reveal is satisfying. Appeals to travelers."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 4
+  notes: "Can use static map images. 4-button works perfectly. Could have difficulty tiers: continents (easy), countries (medium), cities (hard)."
+
+- id: idea-022
+  name: "Ranking Game / Sort It Out"
+  description: "TV shows 4 items (movies, countries, songs, etc). Players must rank them by a hidden criteria (release year, population, length). Each player submits their ranking via ABCD. Closest ranking wins."
+  why_fun: "Debates about what order things go in. People argue confidently and are hilariously wrong. Great for groups."
+  complexity: medium
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 4
+  notes: "Needs sequential button presses (tap A first, then B, etc) to build a ranking. Novel controller interaction. Content database of rankable sets needed."
+
+- id: idea-023
+  name: "Vibe Check / Who Said It"
+  description: "Before the game, each player submits an answer to a prompt via phone (e.g., 'What would you bring to a desert island?'). TV shows the answers anonymously (A/B/C/D). Players guess who said what."
+  why_fun: "Social deduction meets ice-breaker. People learn surprising things about each other. Gets personal in a fun way."
+  complexity: medium
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 4
+  notes: "Needs text input on phone (not just 4 buttons). Great for friend groups who want something more social. Could pair with drinking mode."
+
+# --- Heartbeat 5: Non-ABCD controller games shipped + new ideas (2026-03-22) ---
+
+- id: idea-024
+  name: "Rock Paper Scissors Tournament"
+  description: "Swipe gestures for RPS. Bracket elimination. Quick rounds, good filler between games."
+  why_fun: "Everyone knows it. Bracket format adds stakes. Physical gesture on phone feels good."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 5
+  notes: "Uses swipe controller. Fast rounds = great filler game."
+
+- id: idea-025
+  name: "Dance Pad / Rhythm Arrows"
+  description: "D-pad arrows sync to music beats, DDR-style. Score on timing accuracy. Uses existing dpad + blind test audio infra."
+  why_fun: "Musical + physical. DDR nostalgia. Works with existing dpad and audio systems."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  heartbeat: 5
+  notes: "Can reuse blind test audio infrastructure. Needs beat mapping."
+
+- id: idea-026
+  name: "Tilt Racer"
+  description: "Joystick to steer through a course. Obstacles get tighter each lap. First to finish wins."
+  why_fun: "Racing is universally fun. Joystick steering feels great on phone. Arena already proven in Dodge Master."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  heartbeat: 5
+  notes: "Can reuse Dodge Master's arena rendering. Add lap/course mechanic."
+
+# --- Heartbeat 6: Fresh ideas + sound effects shipped (2026-03-22) ---
+# Gap: no cooperative/team games, no drawing, no asymmetric gameplay. Also noting we just shipped sound effects — opens doors for audio-centric games.
+
+- id: idea-027
+  name: "Emoji Decoder"
+  description: "TV shows a combo of emojis (e.g. house + fire). Players pick from 4 text options what phrase/word it represents. Gets increasingly obscure. Speed bonus."
+  why_fun: "Visual wordplay that's accessible to everyone. Emojis are universally understood. Gets funny with absurd combos."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 6
+  notes: "Zero assets needed — just emoji + text. 4-button works perfectly. Easy content creation."
+
+- id: idea-028
+  name: "Photo Zoom / What is it?"
+  description: "TV starts with an extremely zoomed-in photo. Gradually zooms out over 15 seconds. Players buzz in (tap) and pick from 4 options. Earlier correct guess = more points. Wrong guess = penalty + locked out."
+  why_fun: "Dramatic reveal, risk-reward for buzzing early, lots of shouting at the TV. Visual guessing is universally fun."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  heartbeat: 6
+  notes: "Needs curated photo library. Could use public domain images. Progressive reveal mechanic is unique."
+
+- id: idea-029
+  name: "Team Tug of War"
+  description: "Players split into two teams. TV shows a rope. Both teams tap as fast as possible. Combined taps pull the rope toward your side. Team that crosses the line wins."
+  why_fun: "Cooperative energy — screaming at your teammate to tap faster. Simple mechanic, massive energy. First team game in our catalog."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 6
+  notes: "Uses existing tap mechanic. First cooperative/team-based game. TV visualization is simple rope + two team avatars. Could pair well with sound effects for grunts/cheering."
+
+# --- Heartbeat 7: Asymmetric, creative, and reflex gaps (2026-03-22) ---
+# Gap: no asymmetric roles, no creative/drawing, no "press when you see X" reflex variant.
+
+- id: idea-030
+  name: "Spy / Odd One Out"
+  description: "All players get the same secret word on their phone EXCEPT one spy who gets a different word. TV shows a category hint. Players take turns answering a question about it. Then everyone votes who they think the spy is. Spy scores if they survive + guess the real word."
+  why_fun: "Social deduction with bluffing. The spy sweats trying to blend in. Voting rounds get heated. Proven mechanic (Spyfall)."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  heartbeat: 7
+  notes: "Asymmetric gameplay — first game where one player has a different role. Uses button voting (A/B/C/D = player names). Needs word pair database (real word vs spy word in same category)."
+
+- id: idea-031
+  name: "Doodle Dash"
+  description: "TV shows a word. All players draw it simultaneously on their phone (finger = pen). After 15s, all drawings appear on TV. Players vote for the best/funniest. Points for votes received."
+  why_fun: "Bad drawings are universally hilarious. Competitive creativity with a timer. Gets people laughing at each other's art."
+  complexity: high
+  status: idea
+  added: 2026-03-22
+  heartbeat: 7
+  notes: "Needs a drawing canvas controller type (new). Phone captures touch path as strokes, sends to server, TV renders all drawings. High complexity but high payoff. Voting round uses existing buttons."
+
+- id: idea-032
+  name: "Color Flash / Don't Tap"
+  description: "TV flashes a sequence of colored circles rapidly. Players must tap ONLY when their assigned color appears, and NOT tap on any other color. Tapping wrong = penalty. Missing your color = penalty. Speed increases each round."
+  why_fun: "Reflex + restraint. The 'don't tap' rule creates hilarious false taps. Gets frantic at high speed. Simple to learn, hard to master."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 7
+  notes: "Uses single button controller. Each player is assigned a color at round start. TV flashes colors at increasing speed. Novel twist on reaction games — tests restraint, not just speed."
+
+# --- Heartbeat 8: Party classics, pure chaos, and nostalgia (2026-03-22) ---
+# Gap: no knowledge-free pure-luck games, no party classics (truth/dare, never-have-I-ever), no retro/nostalgia format.
+
+- id: idea-033
+  name: "Never Have I Ever"
+  description: "TV shows a 'Never have I ever...' statement. Players who HAVE done it press the button (confess). Players who haven't stay still. Confessors lose a life. Last player with lives wins. Optional: everyone sees who confessed."
+  why_fun: "The ultimate ice-breaker party game. Reveals hilarious secrets. Zero skill required — just honesty (or bluffing). Gets louder every round."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 8
+  notes: "Single button controller. Needs a database of statements (SFW tiers: mild, spicy, wild). Could pair with drinking mode. Very easy to build."
+
+- id: idea-034
+  name: "Lucky Number / Chaos Roulette"
+  description: "Each player picks a number 1-4 (buttons A/B/C/D). TV spins a wheel or rolls dice. If your number matches, you score big. If not, nothing. Pure luck with dramatic presentation. Optional: betting rounds where you can go all-in."
+  why_fun: "Pure chaos — no skill, just gambling energy and dramatic wheel spins. The person who picks the same number 3 times in a row becomes a legend. Great equalizer for mixed skill groups."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 8
+  notes: "4-button maps to 4 choices. Heavy on TV animation (wheel spin, dice roll). Sound effects make this shine. Good palette cleanser between skill games."
+
+- id: idea-035
+  name: "Retro Pong / Paddle Battle"
+  description: "Classic Pong on TV but multiplayer. Each player controls a paddle on one side of the screen using joystick (up/down). Ball speeds up. Last paddle standing wins. Supports 2-4 players with paddles on all 4 sides."
+  why_fun: "Instant nostalgia. Everyone knows Pong. 4-player variant with paddles on all sides is novel and chaotic. Simple mechanic, high energy."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 8
+  notes: "Uses joystick controller (y-axis only). TV renders the classic Pong board. 4-side variant is unique to our platform. Ball physics are trivial to implement."
+
+# --- Heartbeat 9: Word association, estimation, speed-matching (2026-03-22) ---
+# Gap: no word association/clue-giving, no estimation/bidding, no speed-matching/pattern games.
+
+- id: idea-036
+  name: "Codeword / One-Word Clue"
+  description: "TV shows 8 words in a grid. One 'clue-giver' player sees which 4 belong to their team. They type a one-word clue + number on their phone. Other players tap words they think match. Like Codenames but simplified for phone controls."
+  why_fun: "Codenames is one of the best party games ever made. The 'one clue to link multiple words' mechanic creates brilliant moments and spectacular failures. Very social."
+  complexity: medium
+  status: idea
+  added: 2026-03-22
+  heartbeat: 9
+  notes: "Needs text input for clue-giver, button taps for guessers. Asymmetric roles (clue-giver vs guesser). Word database needed. Could rotate clue-giver each round."
+
+- id: idea-037
+  name: "Bid or Bust / Price War"
+  description: "TV shows an item with a hidden value. Players secretly bid (pick from 4 price ranges A/B/C/D, or use d-pad for precise bidding). Closest without going over wins. Going over = bust. Like The Price is Right but competitive."
+  why_fun: "Bidding creates tension and schadenfreude. The 'closest without going over' rule means you can play it safe or gamble. Arguments about value are half the fun."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 9
+  notes: "Evolution of idea-009 (Price is Right) with proper bidding mechanics instead of just picking ranges. 4-button or d-pad works. Needs item+price database."
+
+- id: idea-038
+  name: "Match Madness / Speed Pairs"
+  description: "TV shows a grid of face-down cards. Cards briefly flash (0.5s). Players race to tap matching pairs by pressing button combos (A=top-left, B=top-right, etc). First to find a match scores. Grid reshuffles after each find."
+  why_fun: "Classic memory/matching game with a competitive twist. Brief card reveals reward attention. Speed pressure makes people panic-tap. Works for all ages."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 9
+  notes: "4 buttons map to 4 card positions (2x2 grid). Could scale to 8 positions with two taps. Simple to implement. Classic mechanic everyone knows."
+
+# --- Heartbeat 10: Hot seat, physics, and chain-combo (2026-03-22) ---
+# Gap: no "hot seat" spotlight format, no physics-based gameplay, no chain/combo scoring.
+
+- id: idea-039
+  name: "Hot Seat / Spotlight"
+  description: "One player is in the 'hot seat'. TV shows a category (e.g. 'Name 5 pizza toppings'). Hot seat player must list answers by tapping buttons mapped to options before time runs out. Other players watch + judge. Rotate each round."
+  why_fun: "Spotlight pressure is hilarious — everyone watches one person panic. The crowd energy of cheering/heckling. Works like a game show with rotating contestants."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 10
+  notes: "Only the hot-seat player's phone is active each round. Others spectate on TV. Simple rotation logic. Content database of 'Name 5...' categories needed."
+
+- id: idea-040
+  name: "Stack Attack / Tower Builder"
+  description: "TV shows a growing tower of blocks. Players tap at the right moment to place their block (timing-based). Blocks that overhang get trimmed. Tower gets narrower. Miss the timing = block falls. Last player to successfully place wins."
+  why_fun: "Physics-ish tension — the tower visually wobbles and narrows. Each tap is a hold-your-breath moment. Spectators groan at bad placements. Inspired by Stacker arcade games."
+  complexity: medium
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 10
+  notes: "Single button timing game. TV renders the tower with oscillating block. Tap to drop. Simple physics sim. Could add wind/obstacles in later rounds."
+
+- id: idea-041
+  name: "Combo Chain / Word Chain"
+  description: "TV shows a starting word. Players take turns picking the next word that shares a connection (rhyme, first letter, same category — rule changes each round). Chain builds on screen. Break the chain = lose a life. Speed pressure increases."
+  why_fun: "Word association under pressure. The chain gets absurd as people stretch connections. Arguments about whether a link is valid are half the fun. Gets competitive fast."
+  complexity: medium
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 10
+  notes: "Each turn, player picks from 4 word options (A/B/C/D). Server validates the connection. Could have community voting on disputed links. Timer shortens each round."
+
+# --- Heartbeat 11: Telephone, rhythm creation, and image trivia (2026-03-22) ---
+# Gap: no "broken telephone" chain games, no music/beat creation, no image-based trivia.
+
+- id: idea-042
+  name: "Broken Telephone / Whisper Chain"
+  description: "Player 1 sees a phrase on their phone and picks from 4 drawings to represent it. Player 2 sees the drawing and picks from 4 phrases. Player 3 sees that phrase and picks from 4 drawings. Chain alternates. Final result vs original is revealed on TV."
+  why_fun: "The telephone effect is guaranteed laughs — watching a phrase mutate through drawing-to-text-to-drawing. The final reveal is always hilarious. Social and creative."
+  complexity: medium
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 11
+  notes: "Uses 4-button selection (not free drawing). Pre-generated drawing options make it simpler than Doodle Dash. Turn-based, so phone activates one player at a time. Needs phrase + drawing asset pairs."
+
+- id: idea-043
+  name: "Beat Drop / Rhythm Creator"
+  description: "TV shows a 4-beat loop grid. Each player adds one sound per round by pressing A/B/C/D (kick, snare, hi-hat, bass). Loop builds collaboratively. After 4 rounds, the full beat plays back. Players vote on the best contribution."
+  why_fun: "Collaborative music creation — everyone contributes to a beat. Some beats sound amazing by accident, others are gloriously bad. The playback moment is always a highlight."
+  complexity: medium
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 11
+  notes: "Uses Web Audio API (already in place for sound effects). 4 buttons = 4 instrument sounds. Collaborative — not competitive per se, but voting adds a winner. Could have genre themes (hip-hop, electronic, rock)."
+
+- id: idea-044
+  name: "Flag Quiz / Logo Quiz"
+  description: "TV shows a country flag, brand logo, or famous landmark (partially obscured). Players pick from 4 text answers. Progressive reveal if no one answers quickly. Categories rotate: flags, logos, landmarks, movie posters."
+  why_fun: "Visual recognition trivia that's different from text-based trivia. Flags and logos tap into different knowledge than typical quiz games. Good variety in our quiz category."
+  complexity: low
+  status: shipped
+  added: 2026-03-22
+  heartbeat: 11
+  notes: "Image-based trivia variant. Needs curated image sets (flags are easy — public domain). 4-button works perfectly. Could reuse trivia game engine with image support added."
+
+# --- Heartbeat 12: Debate, deception, and priority pass (2026-03-23) ---
+# Gap: no debate/argument format, no "catch the liar" mechanic. Also adding a priority ranking of top buildable ideas.
+
+- id: idea-045
+  name: "Debate Club / Hot Take"
+  description: "TV shows a spicy opinion (e.g. 'Pineapple belongs on pizza'). Players vote AGREE or DISAGREE (2 buttons). Then the minority must defend their position — TV gives them 15 seconds. After the defense, everyone revotes. Points for changing minds."
+  why_fun: "Forces people to argue for positions they may not even believe. The 15-second defense creates hilarious improvised speeches. Social energy through the roof."
+  complexity: low
+  status: shipped
+  added: 2026-03-23
+  heartbeat: 12
+  notes: "2 buttons (agree/disagree). Needs statement database. Voting + timer is trivial. The social pressure does all the work. Great for groups who like to argue."
+
+- id: idea-046
+  name: "Fact or Cap / Catch the Liar"
+  description: "One player sees a true fact on their phone. They can tell it truthfully OR make up a lie. They type/select their version. TV shows what they said. Others vote FACT or CAP (truth or lie). Points for fooling people or catching liars."
+  why_fun: "Bluffing + detection. People's poker faces get tested. The reveal moment ('That was actually TRUE') is always dramatic. Social deduction at its simplest."
+  complexity: low
+  status: shipped
+  added: 2026-03-23
+  heartbeat: 12
+  notes: "Asymmetric: one presenter, others are judges. 2 buttons for voting. Needs a database of surprising-but-true facts. Could use text input for custom lies or pick-from-4 for simplified version."
+
+- id: idea-047
+  name: "Shake It / Phone Tilt"
+  description: "Players tilt or shake their phone as instructed by TV ('Tilt LEFT!', 'Shake!'). Phone accelerometer detects motion. Fastest correct response scores. Wrong motion = penalty. Gets faster each round."
+  why_fun: "Physical phone interaction — people waving phones around is inherently funny. Uses a sensor most party games ignore. Gets people moving without leaving the couch."
+  complexity: high
+  status: idea
+  added: 2026-03-23
+  heartbeat: 12
+  notes: "Needs DeviceMotion API access. May require HTTPS + user permission. High complexity due to sensor calibration. But unique differentiator — no competitor does this well."
+
+# --- Heartbeat 13: Building streak + new ideas (2026-03-25) ---
+# Shipped Lucky Number and Retro Pong this session. Total: 17 games. Adding new ideas.
+
+- id: idea-048
+  name: "Category Sprint"
+  description: "TV shows a category (e.g. 'Countries in Europe'). Each round, 4 options appear — players race to tap valid answers. Wrong tap = freeze for 2s. Most correct answers in 30s wins."
+  why_fun: "Speed + knowledge combo. Categories rotate so no one dominates. Freeze penalty creates drama — you see others scoring while you're stuck."
+  complexity: low
+  status: shipped
+  added: 2026-03-25
+  heartbeat: 13
+  notes: "4-button format. Needs category + answer database. Simple timer + validation logic. Good variety from pure reaction games."
+
+- id: idea-049
+  name: "Auction House / Bid War"
+  description: "TV shows mystery items with hints. Players bid using buttons (A=100, B=200, C=500, D=1000). Highest unique bid wins. If tied, both lose. Strategy: bid high enough to win but not so high you lose points."
+  why_fun: "Game theory in a party setting. The 'unique bid' twist means you have to outthink others, not just bid highest. Mind games and bluffing."
+  complexity: low
+  status: shipped
+  added: 2026-03-25
+  heartbeat: 13
+  notes: "4-button bidding. Unique bid mechanic is novel. Could reveal bids dramatically one by one. Needs item/hint database."
+
+- id: idea-050
+  name: "Freeze Dance / Musical Statues"
+  description: "TV plays music with a visual beat indicator. Players tap along to the rhythm. Music randomly stops — if you tap during silence, you're out. Last player standing wins."
+  why_fun: "Classic party game digitized. The tension of waiting for the music to stop. Uses our Web Audio API. Gets everyone hyped."
+  complexity: medium
+  status: shipped
+  added: 2026-03-25
+  heartbeat: 13
+  notes: "Single button tap. Web Audio for music generation. Needs silence detection window. Elimination mechanic. Could reuse blind test audio infra."
+
+# --- Heartbeat 2026-03-27: New ideas ---
+
+- id: idea-051
+  name: "Odd One Out"
+  description: "TV shows 4 items — 3 belong to a category, 1 doesn't. Players race to spot the odd one out. Speed bonus for fast answers, penalty for wrong guesses."
+  why_fun: "Simple concept everyone understands instantly. The category hint adds strategy. Wrong penalty creates risk-reward tension. Great for all ages."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "25 curated sets with explanations. 4-button works perfectly. Could add harder rounds with more subtle differences."
+
+- id: idea-052
+  name: "Emoji Story"
+  description: "TV shows 3-4 emojis that represent a movie, fairy tale, or scene. Players pick from 4 text options what the emojis describe. Like visual riddles with emoji storytelling."
+  why_fun: "Emoji puzzles are universally fun — the 'aha!' moment when you decode them. Movies/fairy tales make great categories everyone recognizes."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "25 curated puzzles across movies, superheroes, fairy tales, fantasy. 4-button works perfectly."
+
+- id: idea-053
+  name: "Photo Finish / Trivia Race"
+  description: "Race-style trivia game. Correct answers advance your position on a track. Wrong answers set you back. First to the finish line wins big bonus. Visual race with per-player progress bars."
+  why_fun: "Combines trivia with a visual race mechanic — seeing yourself fall behind or pull ahead adds drama. Wrong answers matter, creating risk-reward tension."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "20 curated trivia questions. Race track visualization. First-to-finish mechanic instead of fixed rounds."
+
+- id: idea-054
+  name: "Sound Bites"
+  description: "TV displays an onomatopoeia (BUZZ BUZZ, TICK TOCK, SPLASH!) with an emoji hint. Players pick from 4 options what makes that sound. Visual sound puzzles."
+  why_fun: "Onomatopoeia is inherently funny to read out loud. The emoji hints help but don't give it away. Universal concept, all ages."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "25 curated sound puzzles across animals, objects, nature, food, vehicles. 4-button works perfectly. Adapted from idea-003."
+
+- id: idea-055
+  name: "Ranking Game"
+  description: "TV shows 4 items and a ranking criteria (biggest to smallest, fastest to slowest). Players race to pick the #1 item. Partial credit for picking #2. Reveals full order."
+  why_fun: "Creates heated debates. People are confidently wrong about sizes, speeds, populations. The full reveal with numbered rankings is satisfying."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "20 curated ranking puzzles across geography, science, sports, animals, food. Simplified from idea-022 to 'pick #1' for 4-button controller."
+
+- id: idea-056
+  name: "Chain Reaction"
+  description: "TV shows a word. Players pick which of 4 words comes next in a common compound word chain (Sun→Flower→Pot→Luck). Each correct pick extends the chain. Speed bonus."
+  why_fun: "The chain mechanic is addictive — seeing compound words link up is satisfying. Easy concept, tricky execution."
+  complexity: low
+  added: 2026-03-27
+  status: shipped
+  notes: "25 curated compound word puzzles with streak bonuses. 4-button works perfectly."
+
+- id: idea-057
+  name: "Time Bomb Trivia"
+  description: "A timer counts down from 30s. Players take turns answering rapid-fire true/false questions. Wrong answer = bomb explodes on you. Last player standing wins."
+  why_fun: "The pressure of the ticking timer plus the elimination mechanic. Quick rounds, high energy."
+  complexity: medium
+  added: 2026-03-27
+  status: shipped
+  notes: "30 curated true/false questions. Turn-based with 30s shared bomb timer. 2 buttons (TRUE/FALSE). Elimination mechanic."
+
+- id: idea-058
+  name: "Countdown"
+  description: "A big timer counts down from 5 to 0 on the TV. Players must press their button at the exact moment it hits zero. Closest to zero wins. Precision timing game."
+  why_fun: "Deceptively simple. Everyone thinks they can hit zero, but the millisecond offsets create drama. Perfect hits feel amazing. The reveal showing everyone's timing is hilarious."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "8 rounds. Perfect (<100ms) = 300pts, Good (<300ms) = 200pts, OK (<2s late) = 100pts. Single button controller."
+
+- id: idea-059
+  name: "Vibe Check"
+  description: "TV shows a fun opinion question (Best pizza topping? Best superpower?). Everyone votes A/B/C/D. You score if you match the majority. Unanimous = bonus for all."
+  why_fun: "Social game that reveals group dynamics. Do you go with your real opinion or try to predict the crowd? Unanimous moments are electric. Great icebreaker."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "25 curated polls across food, travel, movies, life, fun. Majority = 200pts, unanimous = +100 bonus. From backlog idea-023."
+
+- id: idea-060
+  name: "Closest Guess"
+  description: "TV shows a question with a numerical answer (e.g. 'How many bones in the human body?'). Players pick from 4 number options. Closest to the real answer wins the most points."
+  why_fun: "Everyone thinks they know these numbers, but they're always slightly off. The reveal is satisfying. Great mix of knowledge and estimation."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "20 curated estimation questions across science, geography, space, history, sports. 4-button number picker."
+
+- id: idea-061
+  name: "Blitz Quiz"
+  description: "Lightning-fast trivia — only 4 seconds per question! 15 rapid-fire rounds. Pure speed and knowledge. No time to overthink."
+  why_fun: "The ultra-short timer creates panic and excitement. 15 questions means it moves fast. Speed bonus rewards quick thinkers."
+  complexity: low
+  status: shipped
+  added: 2026-03-27
+  notes: "30 curated general knowledge questions. 4s per question, 1.5s reveal. Speed bonus up to 100pts. Great energy game."
+
+- id: idea-062
+  name: "Synonym Sprint"
+  description: "TV shows a word, players race to pick which of 4 options means the same thing. Vocabulary quiz with speed bonus."
+  why_fun: "Accessible word game — you don't need to be a genius, but big words create fun reactions. Speed bonus makes it competitive."
+  complexity: low
+  status: shipped
+  added: 2026-03-31
+  notes: "25 synonym puzzles across emotions, traits, food, size, sound. 7s per question, speed bonus up to 100pts."
+
+- id: idea-063
+  name: "Danger Zone"
+  description: "Each round, choose SAFE (guaranteed 100pts) or RISK (300pts if safe, -150 if danger). Danger chance starts at 30% and escalates +5% per round."
+  why_fun: "Pure gambling energy. Watching someone lose 150pts after choosing risk is hilarious. The escalating danger creates tension. Risk-takers become legends or fools."
+  complexity: low
+  status: shipped
+  added: 2026-03-31
+  notes: "8 rounds, 10 themed danger events (lightning, quicksand, etc). 2 buttons (SAFE/RISK). Great palette cleanser between skill games."
+
+- id: idea-064
+  name: "Pattern Memory"
+  description: "TV shows a sequence of colored buttons (A/B/C/D). Players memorize it and repeat it back. Sequences start at 3 and grow each round."
+  why_fun: "Classic Simon Says memory mechanic. The tension builds as sequences get longer. Perfect scores feel amazing. Everyone groans at one wrong button."
+  complexity: low
+  status: shipped
+  added: 2026-03-31
+  notes: "8 rounds, starting length 3 (+1 per round). 4 buttons (A=red, B=blue, C=green, D=yellow). 800ms per step reveal, 6s input. 200pts correct, +100 perfect bonus."
+
+- id: idea-065
+  name: "Who Wants It More"
+  description: "TV shows a prize (Gold Coins, Diamond Ring, Mystery Box). Players mash the GRAB button — most taps wins the prize. But some prizes are traps that penalize heavy mashers!"
+  why_fun: "Button mashing energy is infectious. The trap twist punishes greed — the person who mashed hardest loses the most. Watching someone celebrate then get hit by a trap is peak comedy."
+  complexity: low
+  status: shipped
+  added: 2026-03-31
+  notes: "10 rounds, 20 prizes (6 traps). 5s mash window. 10pts per tap (normal), -15pts per tap (trap). Single GRAB button. Trap reveals are themed (spiders, poison, curses)."
+
+- id: idea-066
+  name: "Spell Bee"
+  description: "TV shows a word definition + category hint. Players pick the correct spelling from 4 options (one correct, three with common misspellings). Speed bonus for fast answers. Words get harder each round."
+  why_fun: "Everyone thinks they can spell until they can't. Tricky words like 'accommodate' and 'definitely' create genuine arguments. Speed pressure makes people second-guess themselves."
+  complexity: low
+  status: shipped
+  added: 2026-03-31
+  notes: "25 spelling puzzles (easy/medium/hard). 4-button format, 8s per question, speed bonus up to 100pts."
+
+- id: idea-067
+  name: "Lights Out"
+  description: "TV shows a grid of lit/unlit cells. Players must toggle cells to turn all lights off — but toggling one cell also flips its neighbors. Classic puzzle race. First to solve (or closest) wins."
+  why_fun: "Classic logic puzzle with competitive twist. The 'neighbor flip' mechanic creates satisfying chain reactions and frustrating reversals. Players who figure out the pattern feel like geniuses."
+  complexity: medium
+  status: idea
+  added: 2026-03-31
+  notes: "4-button maps to 4 cells (2x2 grid for simplicity). Could scale difficulty. Logic puzzle gap in our catalog — most games are reflex/trivia."
+
+- id: idea-068
+  name: "Snap Judge"
+  description: "TV shows two items and a comparison question (Which is taller? Heavier? Faster?). Players pick A or B. Speed bonus for fast correct answers. Fun facts revealed each round."
+  why_fun: "Everyone has gut feelings about sizes and speeds — and they're often wrong. The fun fact reveals are satisfying 'did you know' moments. Fast-paced 2-button game."
+  complexity: low
+  status: shipped
+  added: 2026-03-31
+  notes: "25 curated comparison puzzles across animals, geography, science, food, space. 2 buttons (A/B), 5s per question, speed bonus up to 150pts."
+
+- id: idea-069
+  name: "Guess the Year"
+  description: "TV shows a historical event. Players pick which year it happened from 4 options. Close answers get partial credit. Speed bonus for fast picks."
+  why_fun: "History trivia with a twist — even wrong answers can score if close enough. Creates 'I swear it was 1912' debates. Great mix of knowledge and estimation."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 curated events across space, history, tech, science, movies, sports, art, games. 4-button, 8s timer, 200pts correct + 100pts close + speed bonus."
+
+- id: idea-070
+  name: "Alphabet Race"
+  description: "TV shows a big letter and a category. Players race to pick which of 4 answers starts with that letter. Speed bonus rewards fast thinkers."
+  why_fun: "The letter constraint makes it harder than you'd think. Seeing 4 options where only 1 starts with the right letter creates satisfying 'aha' moments. Fast-paced and accessible."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 curated puzzles across animals, countries, food, cities, sports, movies, fruits, colors. 4-button, 6s timer, 200pts + up to 150pt speed bonus."
+
+- id: idea-071
+  name: "Top 5"
+  description: "TV shows a Top 5 question (e.g. 'Top 5 largest countries'). Four items shown — 3 belong in the Top 5, one is an imposter. Spot the fake to score."
+  why_fun: "Everyone thinks they know these lists but the imposters are sneaky. Creates heated 'no way Germany is bigger than China' debates. Educational and fun."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 curated Top 5 puzzles across countries, planets, animals, food, sports, cities, tech. 4-button, 6s timer, speed bonus."
+
+- id: idea-072
+  name: "Spot the Fake"
+  description: "TV shows 4 'facts' — 3 are true, 1 is completely made up. Players pick which one is fake. Explanation revealed after each round."
+  why_fun: "Mind-blowing true facts make the fake ones harder to spot. The explanations are the real hook — 'wait, that's actually TRUE?!' moments every round. Educational party game."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 curated fact puzzles across animals, space, history, food, science, tech, sports, movies, body, nature. 10s timer, 250pts + 150 speed bonus. Explanations on reveal."
+
+- id: idea-073
+  name: "This or That"
+  description: "TV shows two options (Beach vs Mountain, Dogs vs Cats). Players pick A or B. Score by matching the majority. Unanimous = bonus for all."
+  why_fun: "Reveals group dynamics instantly. Arguments about pizza vs burgers never get old. The unanimous moments are electric. Social icebreaker that anyone can play."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 binary choice questions across travel, food, lifestyle, entertainment. 2-button (A/B), 5s timer, majority = 200pts, unanimous = +100 bonus."
+
+- id: idea-074
+  name: "Number Crunch"
+  description: "TV shows a big target number. 4 math expressions displayed — only one equals the target. Race to pick the correct one."
+  why_fun: "Mental math under time pressure. The expressions look similar so you can't just guess — you have to actually do the math. Difficulty scales from easy to hard."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 math puzzles (easy/medium/hard). 4-button, 8s timer, 200pts + 150 speed bonus. Monospace font for expressions."
+
+- id: idea-075
+  name: "Finish the Lyric"
+  description: "TV shows a famous song lyric with the last word replaced by ___. Players pick the missing word from 4 options. Song name and artist revealed after each round."
+  why_fun: "Everyone knows these songs but second-guesses themselves under pressure. The reveal with song title creates singalong moments. Universal appeal across generations."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 lyric puzzles from Queen, Beatles, Disney, pop classics. 4-button, 8s timer, 200pts + speed bonus. Song+artist shown on reveal."
+
+- id: idea-076
+  name: "Capital Quiz"
+  description: "TV shows a country name. Players pick its capital from 4 city options. Tricky distractors include the country's most famous city (which often isn't the capital)."
+  why_fun: "Geography trivia where the biggest city is usually wrong. 'Wait, Canberra? Not Sydney?' creates great debates. Accessible but tricky. Educational."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 country puzzles across all continents. Distractors use famous-but-wrong cities. 4-button, 7s timer, 200pts + speed bonus."
+
+- id: idea-077
+  name: "Emoji Math"
+  description: "TV shows emoji algebra equations (🍎+🍎=6, 🍎+🍌=8). Players solve for the unknown emoji value from 4 number options. Difficulty ramps from easy to hard."
+  why_fun: "Emoji visual algebra feels fresh vs plain math. Easy puzzles get everyone in, hard ones create tense moments. The 'aha!' when you crack a 3-clue chain is satisfying."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 puzzles across easy/medium/hard. 4-button ABCD, 12s timer, 300pts + 200 speed bonus. Multi-step clue chains for harder puzzles."
+
+- id: idea-078
+  name: "Before or After"
+  description: "TV shows two historical events. Players pick which one happened first. Years revealed on answer. Covers tech, history, culture, sports, science, food, landmarks."
+  why_fun: "Timeline intuition is surprisingly bad — Nintendo founded same year as Eiffel Tower? Mind-blowing reveals spark debates. 2-button simplicity keeps it fast."
+  complexity: low
+  status: shipped
+  added: 2026-04-05
+  notes: "25 timeline puzzles. 2-button A/B, 7s timer, 200pts + 100 speed bonus. Years shown on reveal with vote counts."
