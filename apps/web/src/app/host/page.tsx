@@ -896,6 +896,36 @@ interface SpotTheFakeData {
   playerPicks: Record<string, number>;
 }
 
+interface ThisOrThatData {
+  round: number;
+  totalRounds: number;
+  phase: 'pick' | 'reveal';
+  optionA: string;
+  optionB: string;
+  category: string;
+  pickMs: number;
+  pickedPlayerIds: string[];
+  countA: number | null;
+  countB: number | null;
+  majority: 'A' | 'B' | 'tie' | null;
+  unanimous: boolean;
+  playerPicks: Record<string, string>;
+}
+
+interface NumberCrunchData {
+  round: number;
+  totalRounds: number;
+  phase: 'pick' | 'reveal';
+  target: number;
+  difficulty: string;
+  options: string[];
+  pickMs: number;
+  pickedPlayerIds: string[];
+  correctIndex: number | null;
+  correctExpr: string | null;
+  playerPicks: Record<string, number>;
+}
+
 // Map Attack data shape
 interface MapAttackData {
   round: number;
@@ -1112,6 +1142,8 @@ const GAME_LABELS: Record<string, string> = {
   alphabetrace: '🔤 Alphabet Race',
   top5: '🏆 Top 5',
   spotthefake: '🕵️ Spot the Fake',
+  thisorthat: '⚖️ This or That',
+  numbercrunch: '🔢 Number Crunch',
 };
 
 // ── QR Code ───────────────────────────────────────────────────────────────────
@@ -3171,6 +3203,14 @@ function GameView({
 
   if (gameId === 'spotthefake' && gameState) {
     return <SpotTheFakeHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'thisorthat' && gameState) {
+    return <ThisOrThatHostView state={gameState} players={players} />;
+  }
+
+  if (gameId === 'numbercrunch' && gameState) {
+    return <NumberCrunchHostView state={gameState} players={players} />;
   }
 
   return (
@@ -8904,6 +8944,189 @@ function SpotTheFakeHostView({ state, players }: { state: GameState; players: Pl
   );
 }
 
+function ThisOrThatHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as ThisOrThatData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const timerFraction = data.pickMs / 5_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+  const isReveal = data.phase === 'reveal';
+  const totalVotes = (data.countA ?? 0) + (data.countB ?? 0);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>Round {data.round}/{data.totalRounds}</span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#a78bfa', borderRadius: 4 }} />
+        </div>
+        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6b7280' }}>{data.category}</span>
+        <span style={{ fontSize: '1.5rem' }}>⚖️</span>
+      </div>
+
+      {!isReveal && (
+        <div style={{ padding: '0 2rem' }}>
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+          </div>
+        </div>
+      )}
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '0 2rem' }}>
+        <div style={{ display: 'flex', gap: '2rem', width: '100%', maxWidth: 700, justifyContent: 'center', alignItems: 'stretch' }}>
+          <div style={{
+            flex: 1, padding: '2rem 1.5rem', borderRadius: 16, textAlign: 'center',
+            background: isReveal && data.majority === 'A' ? 'rgba(34,197,94,0.2)' : isReveal && data.majority === 'B' ? 'rgba(100,100,120,0.1)' : 'rgba(239,68,68,0.15)',
+            border: `3px solid ${isReveal && data.majority === 'A' ? '#22c55e' : isReveal ? '#374151' : '#ef4444'}`,
+            transition: 'all 0.3s',
+          }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: isReveal && data.majority === 'A' ? '#22c55e' : '#ef4444' }}>A</span>
+            <p style={{ fontSize: 'clamp(1.2rem, 3vw, 1.8rem)', fontWeight: 700, marginTop: '0.5rem' }}>{data.optionA}</p>
+            {isReveal && totalVotes > 0 && (
+              <div style={{ marginTop: '1rem' }}>
+                <div style={{ height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${((data.countA ?? 0) / totalVotes) * 100}%`, background: '#ef4444', borderRadius: 4, transition: 'width 0.5s' }} />
+                </div>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#ef4444' }}>{data.countA} vote{data.countA !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', fontSize: '1.5rem', fontWeight: 900, color: '#6b7280' }}>VS</div>
+
+          <div style={{
+            flex: 1, padding: '2rem 1.5rem', borderRadius: 16, textAlign: 'center',
+            background: isReveal && data.majority === 'B' ? 'rgba(34,197,94,0.2)' : isReveal && data.majority === 'A' ? 'rgba(100,100,120,0.1)' : 'rgba(59,130,246,0.15)',
+            border: `3px solid ${isReveal && data.majority === 'B' ? '#22c55e' : isReveal ? '#374151' : '#3b82f6'}`,
+            transition: 'all 0.3s',
+          }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, color: isReveal && data.majority === 'B' ? '#22c55e' : '#3b82f6' }}>B</span>
+            <p style={{ fontSize: 'clamp(1.2rem, 3vw, 1.8rem)', fontWeight: 700, marginTop: '0.5rem' }}>{data.optionB}</p>
+            {isReveal && totalVotes > 0 && (
+              <div style={{ marginTop: '1rem' }}>
+                <div style={{ height: 8, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${((data.countB ?? 0) / totalVotes) * 100}%`, background: '#3b82f6', borderRadius: 4, transition: 'width 0.5s' }} />
+                </div>
+                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#3b82f6' }}>{data.countB} vote{data.countB !== 1 ? 's' : ''}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isReveal && data.unanimous && (
+          <p style={{ fontSize: '1.2rem', color: '#f59e0b', fontWeight: 800 }}>UNANIMOUS! +100 bonus!</p>
+        )}
+
+        {!isReveal && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {nonHostPlayers.map((p) => {
+              const picked = data.pickedPlayerIds.includes(p.id);
+              return (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.2rem 0.5rem', borderRadius: 6, background: picked ? 'rgba(34,197,94,0.15)' : 'rgba(30,30,50,0.4)' }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: picked ? '#22c55e' : '#6b7280' }}>{picked ? '✓' : '...'}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '1.5rem', padding: '1rem 2rem', justifyContent: 'center', background: 'rgba(15,15,26,0.8)' }}>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#22c55e' : '#6b7280' }}>#{i + 1}</span>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NumberCrunchHostView({ state, players }: { state: GameState; players: Player[] }) {
+  const data = state.data as NumberCrunchData;
+  const nonHostPlayers = players.filter((p) => !p.isHost);
+  const sorted = [...nonHostPlayers].sort((a, b) => (state.scores[b.id] ?? 0) - (state.scores[a.id] ?? 0));
+  const timerFraction = data.pickMs / 8_000;
+  const timerColor = timerFraction > 0.5 ? '#22c55e' : timerFraction > 0.25 ? '#f59e0b' : '#ef4444';
+  const isReveal = data.phase === 'reveal';
+  const LABELS = ['A', 'B', 'C', 'D'];
+  const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+  const diffColor = data.difficulty === 'easy' ? '#22c55e' : data.difficulty === 'medium' ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0a0a16', color: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.5rem 2rem', flexShrink: 0 }}>
+        <span style={{ color: '#6b7280', fontSize: '0.875rem', fontWeight: 600 }}>Round {data.round}/{data.totalRounds}</span>
+        <div style={{ flex: 1, height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${(data.round / data.totalRounds) * 100}%`, background: '#a78bfa', borderRadius: 4 }} />
+        </div>
+        <span style={{ fontSize: '0.8rem', fontWeight: 600, color: diffColor, textTransform: 'uppercase' }}>{data.difficulty}</span>
+        <span style={{ fontSize: '1.5rem' }}>🔢</span>
+      </div>
+
+      {!isReveal && (
+        <div style={{ padding: '0 2rem' }}>
+          <div style={{ height: 6, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${timerFraction * 100}%`, background: timerColor, borderRadius: 4, transition: 'width 0.1s linear' }} />
+          </div>
+        </div>
+      )}
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '0 2rem' }}>
+        <p style={{ fontSize: '1rem', color: '#a78bfa', fontWeight: 600 }}>Which expression equals...</p>
+        <div style={{ fontSize: 'clamp(3rem, 8vw, 5rem)', fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>{data.target}</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', width: '100%', maxWidth: 600, marginTop: '1rem' }}>
+          {data.options.map((opt, i) => {
+            const isCorrect = isReveal && i === data.correctIndex;
+            const isWrong = isReveal && i !== data.correctIndex;
+            return (
+              <div key={i} style={{
+                padding: '1.2rem 1.5rem', borderRadius: 12, textAlign: 'center',
+                background: isCorrect ? 'rgba(34,197,94,0.2)' : isWrong ? 'rgba(100,100,120,0.15)' : 'rgba(30,30,50,0.6)',
+                border: `2px solid ${isCorrect ? '#22c55e' : isWrong ? '#374151' : COLORS[i]}`,
+                opacity: isWrong ? 0.4 : 1, transition: 'all 0.3s',
+              }}>
+                <span style={{ fontSize: '1rem', fontWeight: 900, color: isCorrect ? '#22c55e' : COLORS[i] }}>{LABELS[i]}</span>
+                <p style={{ fontSize: 'clamp(1.2rem, 3vw, 1.6rem)', fontWeight: 700, marginTop: '0.3rem', fontFamily: 'monospace' }}>{opt}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {!isReveal && (
+          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {nonHostPlayers.map((p) => {
+              const picked = data.pickedPlayerIds.includes(p.id);
+              return (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0.2rem 0.5rem', borderRadius: 6, background: picked ? 'rgba(34,197,94,0.15)' : 'rgba(30,30,50,0.4)' }}>
+                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: picked ? '#22c55e' : '#6b7280' }}>{picked ? '✓' : '...'}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '1.5rem', padding: '1rem 2rem', justifyContent: 'center', background: 'rgba(15,15,26,0.8)' }}>
+        {sorted.map((p, i) => (
+          <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: i === 0 ? '#22c55e' : '#6b7280' }}>#{i + 1}</span>
+            <div style={{ width: 16, height: 16, borderRadius: '50%', background: AVATAR_COLOR_HEX[p.avatarColor] }} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#f0f0ff' }}>{p.name}</span>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>{state.scores[p.id] ?? 0}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Host Page ─────────────────────────────────────────────────────────────
 
 export default function HostPage() {
@@ -8918,7 +9141,7 @@ export default function HostPage() {
   const [scores, setScores] = useState<Record<string, number> | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
   // Game picker state
-  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance' | 'combochain' | 'brokentelephone' | 'beatdrop' | 'bidorbust' | 'mapattack' | 'oddoneout' | 'emojistory' | 'photofinish' | 'soundbites' | 'rankinggame' | 'chainreaction' | 'timebomb' | 'countdown' | 'vibecheck' | 'closestguess' | 'blitzquiz' | 'synonymsprint' | 'dangerzone' | 'patternmemory' | 'wantitmore' | 'spellbee' | 'snapjudge' | 'guesstheyear' | 'alphabetrace' | 'top5' | 'spotthefake'>('trivia');
+  const [selectedGame, setSelectedGame] = useState<'trivia' | 'reaction' | 'colormatch' | 'mathrace' | 'wordscramble' | 'hotpotato' | 'trueorfalse' | 'tapfrenzy' | 'blindtest' | 'neverhaveiever' | 'colorflash' | 'wouldyourather' | 'luckynumber' | 'retropong' | 'emojidecoder' | 'tugofwar' | 'simonsays' | 'debateclub' | 'categorysprint' | 'auctionhouse' | 'rps' | 'bombdefuse' | 'whackamole' | 'floorislava' | 'buttonmash' | 'dodgeball' | 'priceisright' | 'spinthewheel' | 'copycatchain' | 'factorcap' | 'matchmadness' | 'hotseat' | 'spotthediff' | 'mimetime' | 'twotruths' | 'flagquiz' | 'stackattack' | 'freezedance' | 'combochain' | 'brokentelephone' | 'beatdrop' | 'bidorbust' | 'mapattack' | 'oddoneout' | 'emojistory' | 'photofinish' | 'soundbites' | 'rankinggame' | 'chainreaction' | 'timebomb' | 'countdown' | 'vibecheck' | 'closestguess' | 'blitzquiz' | 'synonymsprint' | 'dangerzone' | 'patternmemory' | 'wantitmore' | 'spellbee' | 'snapjudge' | 'guesstheyear' | 'alphabetrace' | 'top5' | 'spotthefake' | 'thisorthat' | 'numbercrunch'>('trivia');
   const [triviaDifficulty, setTriviaDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [selectedRounds, setSelectedRounds] = useState(1);
   // Session scores — cumulative across all games in this party session
