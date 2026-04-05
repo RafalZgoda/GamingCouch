@@ -782,3 +782,21 @@
   status: shipped
   added: 2026-04-05
   notes: "25 timeline puzzles. 2-button A/B, 7s timer, 200pts + 100 speed bonus. Years shown on reveal with vote counts."
+
+- id: idea-079
+  name: "Rhyme Time"
+  description: "TV shows a word. Players pick the rhyming word from 4 options. Simple, fast, satisfying — BAT rhymes with CAT, SPOON with MOON."
+  why_fun: "Rhyming is intuitive but trickier than you think under time pressure. Distractors are semantically related (TREE → WOOD, LEAF) so you second-guess yourself. Universal appeal."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 rhyme puzzles. 4-button ABCD, 8s timer, 200pts + 100 speed bonus. Options shuffled each round."
+
+- id: idea-080
+  name: "Missing Letter"
+  description: "TV shows a word with one letter replaced by _. Players pick the correct missing letter from 4 options. Category hint shown (Animals, Food, etc)."
+  why_fun: "Spelling under pressure is surprisingly hard — is it VOLC_NO with a C or K? Category hints help but don't give it away. Educational and fun for all ages."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 letter puzzles across 10 categories. 4-button ABCD, 8s timer, 200pts + 100 speed bonus. Full word revealed on answer."

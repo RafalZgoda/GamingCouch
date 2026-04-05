@@ -78,3 +78,5 @@ import '../finishthelyric/FinishTheLyricGame.js';
 import '../capitalquiz/CapitalQuizGame.js';
 import '../emojimath/EmojiMathGame.js';
 import '../beforeorafter/BeforeOrAfterGame.js';
+import '../rhymetime/RhymeTimeGame.js';
+import '../missingletter/MissingLetterGame.js';
