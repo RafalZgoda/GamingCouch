@@ -68,3 +68,5 @@ import '../patternmemory/PatternMemoryGame.js';
 import '../wantitmore/WantItMoreGame.js';
 import '../spellbee/SpellBeeGame.js';
 import '../snapjudge/SnapJudgeGame.js';
+import '../guesstheyear/GuessTheYearGame.js';
+import '../alphabetrace/AlphabetRaceGame.js';
