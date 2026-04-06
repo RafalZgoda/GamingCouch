@@ -82,3 +82,5 @@ import '../rhymetime/RhymeTimeGame.js';
 import '../missingletter/MissingLetterGame.js';
 import '../soundalike/SoundAlikeGame.js';
 import '../categoryblitz/CategoryBlitzGame.js';
+import '../acronymdecoder/AcronymDecoderGame.js';
+import '../biggerorsmaller/BiggerOrSmallerGame.js';

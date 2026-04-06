@@ -818,3 +818,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 category+letter puzzles. 4-button ABCD, 7s timer, 200pts + 100 speed bonus. Shuffled options."
+
+- id: idea-083
+  name: "Acronym Decoder"
+  description: "TV shows a famous acronym (NASA, FIFA, SCUBA). Players pick what it stands for from 4 plausible options. Distractors sound convincing."
+  why_fun: "Everyone uses acronyms but few know what they actually stand for. Convincing distractors create hilarious debates — is WiFi 'Wireless Fidelity' or 'Wide Frequency Internet'?"
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 acronym puzzles across tech, science, sports, internet. 4-button ABCD, 10s timer (longer text), 250pts + 150 speed bonus."
+
+- id: idea-084
+  name: "Bigger or Smaller"
+  description: "TV shows two items with hidden values (Height of Eiffel Tower vs Statue of Liberty). Players pick which is bigger. Values revealed on answer with vote counts."
+  why_fun: "Intuition about sizes/numbers is terrible — people consistently misjudge. The reveal with exact numbers creates 'no way!' moments. A vs B format is instant to understand."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 comparison puzzles across landmarks, animals, space, food, sports. 2-button A/B, 7s timer, 200pts + 100 speed bonus. Values formatted with K/M/B suffixes."
