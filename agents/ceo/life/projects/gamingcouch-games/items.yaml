@@ -926,3 +926,21 @@
   status: shipped
   added: 2026-04-06
   notes: "12 randomly generated Stroop puzzles per session. 4-button ABCD, 5s timer, 200pts + 200 speed bonus. Giant colored text display."
+
+- id: idea-095
+  name: "Reverse Spell"
+  description: "TV shows a word spelled backwards in monospace (TNAHPELE). Players pick which of 4 words it actually is. Category hint helps narrow it down."
+  why_fun: "Reading backwards is deceptively hard under time pressure. Your brain wants to read forward and the similar-looking distractors (ELEGANCE vs ELEPHANT) make it even trickier. Simple concept, instant fun."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 curated words across animals, food, nature, objects. 4-button ABCD, 8s timer, 200pts + 150 speed bonus. Monospace display."
+
+- id: idea-096
+  name: "Who Said It?"
+  description: "TV shows a famous quote. Players guess who said it from 4 options — philosophers, scientists, movie characters, and more."
+  why_fun: "Quotes are often misattributed in real life, making this surprisingly tricky. Mix of real people and fictional characters keeps everyone guessing. The 12s timer gives time to think but not overthink."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 quote puzzles across philosophy, history, science, movies, music, literature. 4-button ABCD, 12s timer, 250pts + 150 speed bonus. Italic quote display."

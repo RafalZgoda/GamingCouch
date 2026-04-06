@@ -94,3 +94,5 @@ import '../flagfrenzy/FlagFrenzyGame.js';
 import '../oddwordout/OddWordOutGame.js';
 import '../tonguetwister/TongueTwisterGame.js';
 import '../colorspy/ColorSpyGame.js';
+import '../reversespell/ReverseSpellGame.js';
+import '../whosaidit/WhoSaidItGame.js';
