@@ -980,3 +980,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 tricky words from QUEUE to ANTIDISESTABLISHMENTARIANISM. 4-button ABCD, 6s timer, 200pts + 150 speed bonus. Letter count shown on reveal."
+
+- id: idea-101
+  name: "Emoji Chain"
+  description: "TV shows 3 emojis (🌻🌞🔥). Players pick the word that links them all (Sun — sunflower, sunshine, sunburn). Creative word association with visual clues."
+  why_fun: "Emojis as abstract visual puzzles tap into creative thinking. The linking word isn't always obvious and the distractors are semantically close. Feels like a visual riddle."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 emoji chain puzzles across nature, music, fantasy, objects, colors. 4-button ABCD, 10s timer, 250pts + 150 speed bonus."
+
+- id: idea-102
+  name: "Capital Confusion"
+  description: "TV shows a city and country (Sydney, Australia). Players decide if it's really the capital. Fun facts and real capitals revealed — most people get tricked by famous non-capitals."
+  why_fun: "Everyone thinks Sydney is Australia's capital (it's Canberra). The mix of real capitals and famous fakes creates heated debates. Fun facts on reveal are genuinely interesting."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 city/country pairs (mix of real and fake capitals). 2-button Yes/No, 7s timer, 200pts + 100 speed bonus. Real capital + fun fact on reveal."
