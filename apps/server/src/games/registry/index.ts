@@ -102,3 +102,5 @@ import '../mythorfact/MythOrFactGame.js';
 import '../lettercount/LetterCountGame.js';
 import '../emojichain/EmojiChainGame.js';
 import '../capitalconfusion/CapitalConfusionGame.js';
+import '../syllablecount/SyllableCountGame.js';
+import '../oddemojiout/OddEmojiOutGame.js';

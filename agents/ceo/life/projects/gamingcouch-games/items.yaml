@@ -998,3 +998,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 city/country pairs (mix of real and fake capitals). 2-button Yes/No, 7s timer, 200pts + 100 speed bonus. Real capital + fun fact on reveal."
+
+- id: idea-103
+  name: "Syllable Count"
+  description: "TV shows a word (CHOCOLATE). Players guess how many syllables from 4 options. Syllable breakdown shown on reveal (CHOC-O-LATE). Harder than it sounds."
+  why_fun: "People genuinely disagree on syllable counts — is COMFORTABLE 3 or 4? The breakdown reveal settles debates. Short timer forces gut instinct over careful counting."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 tricky words from SQUIRREL to SUPERCALIFRAGILISTIC. 4-button ABCD, 7s timer, 200pts + 150 speed bonus. Syllable breakdown on reveal."
+
+- id: idea-104
+  name: "Odd Emoji Out"
+  description: "TV shows 4 large emojis — 3 share a theme (fruits, weather, vehicles) and 1 doesn't belong. Spot the imposter. Connection revealed after."
+  why_fun: "Visual and instant to understand — no reading needed. The emojis are big and colorful, making it feel playful. Connection reveal creates 'oh yeah' moments. Great for all ages."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 emoji puzzles across food, animals, nature, sports, tech, music, transport. 4-button ABCD, 8s timer, 200pts + 150 speed bonus. Shuffled positions, connection on reveal."
