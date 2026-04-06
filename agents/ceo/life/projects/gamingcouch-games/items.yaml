@@ -908,3 +908,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 curated puzzles across food, animals, science, geography, music, art, sports. 4-button, 10s timer, 200pts + 150 speed bonus. Connection shown on reveal."
+
+- id: idea-093
+  name: "Tongue Twister"
+  description: "TV shows a famous tongue twister with one word blanked out. Players pick the missing word from 4 options. Full phrase revealed on answer."
+  why_fun: "Everyone knows these tongue twisters but blanking one word makes them surprisingly hard to recall. The alliterative distractors ('seagulls' vs 'seashells') are deviously confusing."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 classic tongue twisters. 4-button ABCD, 8s timer, 200pts + 150 speed bonus. Italic quote display, full phrase on reveal."
+
+- id: idea-094
+  name: "Color Spy"
+  description: "TV shows a color word (RED) displayed in a DIFFERENT color ink. Players must name the INK color, not the word. Classic Stroop effect under time pressure."
+  why_fun: "The Stroop effect is a real psychology phenomenon — your brain reads 'RED' faster than it sees blue ink. With a 5-second timer, even smart players get tricked. Huge speed bonus rewards focus."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "12 randomly generated Stroop puzzles per session. 4-button ABCD, 5s timer, 200pts + 200 speed bonus. Giant colored text display."

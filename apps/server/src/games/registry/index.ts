@@ -92,3 +92,5 @@ import '../emojitranslate/EmojiTranslateGame.js';
 import '../speedmath/SpeedMathGame.js';
 import '../flagfrenzy/FlagFrenzyGame.js';
 import '../oddwordout/OddWordOutGame.js';
+import '../tonguetwister/TongueTwisterGame.js';
+import '../colorspy/ColorSpyGame.js';
