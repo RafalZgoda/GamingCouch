@@ -800,3 +800,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 letter puzzles across 10 categories. 4-button ABCD, 8s timer, 200pts + 100 speed bonus. Full word revealed on answer."
+
+- id: idea-081
+  name: "Sound Alike"
+  description: "TV shows a clue like 'FLOWER / WHEAT' with a hint. Players pick the correct homophone spelling (FLOUR, not FLOOR). Tricky distractors that sound similar."
+  why_fun: "Homophones are deceptively hard — everyone thinks they know the right spelling until they're under pressure. Clue+hint combo creates a fun 'aha!' moment."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 homophone puzzles with clue/hint pairs. 4-button ABCD, 8s timer, 200pts + 100 speed bonus. Shuffled options."
+
+- id: idea-082
+  name: "Category Blitz"
+  description: "TV shows a category (Animals, Food, Cities) and a letter. Pick the item that belongs to that category AND starts with that letter. 3 distractors start with the same letter but wrong category."
+  why_fun: "Double constraint (category + letter) makes it trickier than it looks. Distractors share the same starting letter so you can't just pattern-match. Fast rounds, accessible for everyone."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 category+letter puzzles. 4-button ABCD, 7s timer, 200pts + 100 speed bonus. Shuffled options."

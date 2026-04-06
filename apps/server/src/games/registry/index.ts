@@ -80,3 +80,5 @@ import '../emojimath/EmojiMathGame.js';
 import '../beforeorafter/BeforeOrAfterGame.js';
 import '../rhymetime/RhymeTimeGame.js';
 import '../missingletter/MissingLetterGame.js';
+import '../soundalike/SoundAlikeGame.js';
+import '../categoryblitz/CategoryBlitzGame.js';
