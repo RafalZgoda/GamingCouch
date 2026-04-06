@@ -872,3 +872,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 event puzzles across 10+ categories. 4-button ABCD, 8s timer, 200pts + 100 speed bonus. Exact year shown on reveal."
+
+- id: idea-089
+  name: "Emoji Translate"
+  description: "TV shows a sequence of emojis (🦁👑). Players guess which movie it represents from 4 options. Categories and emoji creativity make it hilarious."
+  why_fun: "Emojis as a puzzle language are universally understood. 🕷️🧑 = Spider-Man is obvious, but 🤖❤️🌱 = WALL-E requires real thought. Movie trivia meets visual puzzles."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 movie emoji puzzles. 4-button ABCD, 10s timer, 250pts + 150 speed bonus. Large emoji display with category badge."
+
+- id: idea-090
+  name: "Speed Math"
+  description: "TV shows a math problem (47 + 38 = ?). Players race to pick the correct answer from 4 options. Addition, subtraction, and multiplication. Speed bonus rewards fast solvers."
+  why_fun: "Mental math under pressure is surprisingly exciting. The 6-second timer means no time for pen and paper. Multiplication rounds (7 × 9) create satisfying 'I knew it!' moments."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "30 randomly generated puzzles per session (+, -, ×). 4-button ABCD, 6s timer, 200pts + 150 speed bonus. Monospace question display."

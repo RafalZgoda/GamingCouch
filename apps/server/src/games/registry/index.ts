@@ -88,3 +88,5 @@ import '../famousquotes/FamousQuotesGame.js';
 import '../animalornot/AnimalOrNotGame.js';
 import '../wordassociation/WordAssociationGame.js';
 import '../decadedetector/DecadeDetectorGame.js';
+import '../emojitranslate/EmojiTranslateGame.js';
+import '../speedmath/SpeedMathGame.js';
