@@ -86,3 +86,5 @@ import '../acronymdecoder/AcronymDecoderGame.js';
 import '../biggerorsmaller/BiggerOrSmallerGame.js';
 import '../famousquotes/FamousQuotesGame.js';
 import '../animalornot/AnimalOrNotGame.js';
+import '../wordassociation/WordAssociationGame.js';
+import '../decadedetector/DecadeDetectorGame.js';

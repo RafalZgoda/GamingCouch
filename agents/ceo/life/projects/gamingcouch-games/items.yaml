@@ -854,3 +854,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 animals (15 real, 10 fake). 2-button Real/Fake, 6s timer, 200pts + 100 speed bonus. Fun facts on reveal with vote bars."
+
+- id: idea-087
+  name: "Word Association"
+  description: "TV shows a word (SALT). Players pick the most associated word from 4 options (PEPPER, not SUGAR). Classic word pairs everyone knows but second-guesses under pressure."
+  why_fun: "Word pairs are deeply ingrained — SALT→PEPPER is instant, but all 4 distractors are plausible (SUGAR, WATER, FLOUR). Fast rounds, instant understanding, no explanation needed."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 word pair puzzles. 4-button ABCD, 7s timer, 200pts + 100 speed bonus. Shuffled options."
+
+- id: idea-088
+  name: "Decade Detector"
+  description: "TV shows an event/invention (First iPhone released). Players pick the decade it happened from 4 options. Exact year revealed on answer."
+  why_fun: "People are terrible at placing events in time — was Pac-Man 70s or 80s? The year reveal creates 'I was so wrong!' moments. Covers tech, movies, sports, music, science."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 event puzzles across 10+ categories. 4-button ABCD, 8s timer, 200pts + 100 speed bonus. Exact year shown on reveal."
