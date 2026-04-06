@@ -890,3 +890,21 @@
   status: shipped
   added: 2026-04-06
   notes: "30 randomly generated puzzles per session (+, -, ×). 4-button ABCD, 6s timer, 200pts + 150 speed bonus. Monospace question display."
+
+- id: idea-091
+  name: "Flag Frenzy"
+  description: "TV shows a country flag emoji (🇧🇷). Players pick which country it belongs to from 4 options. Continent badge shown for context."
+  why_fun: "Flags are surprisingly tricky — everyone knows 🇺🇸 but 🇹🇭 vs 🇨🇷? The big emoji display is visually striking and the continent hint adds just enough help to keep it fun."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 flag puzzles across all continents. 4-button ABCD, 8s timer, 200pts + 150 speed bonus. Giant flag emoji display."
+
+- id: idea-092
+  name: "Odd Word Out"
+  description: "TV shows 4 words — 3 share a hidden connection (e.g. types of cheese) and 1 doesn't belong. Spot the odd one out. Connection revealed after each round."
+  why_fun: "The connections are sneaky — Granite among cheeses, Pluto among planets. The reveal of the connection creates 'oh I see it now!' moments. Feels like a mini puzzle each round."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 curated puzzles across food, animals, science, geography, music, art, sports. 4-button, 10s timer, 200pts + 150 speed bonus. Connection shown on reveal."

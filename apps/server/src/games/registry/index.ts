@@ -90,3 +90,5 @@ import '../wordassociation/WordAssociationGame.js';
 import '../decadedetector/DecadeDetectorGame.js';
 import '../emojitranslate/EmojiTranslateGame.js';
 import '../speedmath/SpeedMathGame.js';
+import '../flagfrenzy/FlagFrenzyGame.js';
+import '../oddwordout/OddWordOutGame.js';
