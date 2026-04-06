@@ -98,3 +98,5 @@ import '../reversespell/ReverseSpellGame.js';
 import '../whosaidit/WhoSaidItGame.js';
 import '../sounditout/SoundItOutGame.js';
 import '../firstandlast/FirstAndLastGame.js';
+import '../mythorfact/MythOrFactGame.js';
+import '../lettercount/LetterCountGame.js';

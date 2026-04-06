@@ -962,3 +962,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 curated puzzles across animals, food, planets, instruments, geography. 4-button ABCD, 8s timer, 200pts + 150 speed bonus. Monospace hint display, word revealed on answer."
+
+- id: idea-099
+  name: "Myth or Fact"
+  description: "TV shows a wild statement ('Goldfish have a 3-second memory'). Players decide myth or fact. Explanation revealed after — educational and surprising every time."
+  why_fun: "Real facts sound made up (wombat poop is cube-shaped) and myths sound real (we only use 10% of our brain). The explanation reveal creates genuine 'wait, really?!' moments."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 myth/fact puzzles across animals, science, health, history, space, culture. 2-button Myth/Fact, 8s timer, 200pts + 100 speed bonus. Vote bars + explanation on reveal."
+
+- id: idea-100
+  name: "Letter Count"
+  description: "TV shows a word (MISSISSIPPI). Players guess how many letters from 4 number options. Sounds easy but double letters and silent letters trip everyone up."
+  why_fun: "Counting letters in your head is harder than you think — RHYTHM has 6? QUEUE has 5? The 6-second timer means no time to carefully count. Quick, simple, surprisingly competitive."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 tricky words from QUEUE to ANTIDISESTABLISHMENTARIANISM. 4-button ABCD, 6s timer, 200pts + 150 speed bonus. Letter count shown on reveal."
