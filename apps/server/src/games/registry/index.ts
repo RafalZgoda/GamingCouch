@@ -84,3 +84,5 @@ import '../soundalike/SoundAlikeGame.js';
 import '../categoryblitz/CategoryBlitzGame.js';
 import '../acronymdecoder/AcronymDecoderGame.js';
 import '../biggerorsmaller/BiggerOrSmallerGame.js';
+import '../famousquotes/FamousQuotesGame.js';
+import '../animalornot/AnimalOrNotGame.js';

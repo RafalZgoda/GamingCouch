@@ -836,3 +836,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 comparison puzzles across landmarks, animals, space, food, sports. 2-button A/B, 7s timer, 200pts + 100 speed bonus. Values formatted with K/M/B suffixes."
+
+- id: idea-085
+  name: "Famous Quotes"
+  description: "TV shows a famous quote. Players pick who said it (or what movie/show it's from) from 4 options. Covers movies, history, science, TV, sports, brands."
+  why_fun: "Everyone recognizes quotes but can't place them under pressure. Distractors are plausible same-era/genre sources. Quotes from pop culture to philosophy — something for everyone."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 quote puzzles. 4-button ABCD, 10s timer, 250pts + 150 speed bonus. Italic quote display with category badge."
+
+- id: idea-086
+  name: "Animal or Not"
+  description: "TV shows a weird name (Axolotl, Flumpleback, Narwhal). Players decide if it's a real animal or totally made up. Fun facts revealed for real ones."
+  why_fun: "Real animals have insane names — Aye-Aye, Fossa, Gerenuk. Fake ones sound just as plausible. The reveal with fun facts creates 'no way that's real!' moments. 2-button simplicity."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 animals (15 real, 10 fake). 2-button Real/Fake, 6s timer, 200pts + 100 speed bonus. Fun facts on reveal with vote bars."
