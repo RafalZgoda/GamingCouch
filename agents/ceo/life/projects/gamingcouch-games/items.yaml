@@ -944,3 +944,21 @@
   status: shipped
   added: 2026-04-06
   notes: "25 quote puzzles across philosophy, history, science, movies, music, literature. 4-button ABCD, 12s timer, 250pts + 150 speed bonus. Italic quote display."
+
+- id: idea-097
+  name: "Sound It Out"
+  description: "TV shows a word written phonetically (NOM-uh-NAY-shun). Players pick the actual word from 4 similar-sounding options. Tests pronunciation knowledge."
+  why_fun: "Phonetic spelling makes even common words look alien. The distractors sound similar (Anomaly vs Anatomy vs Analogy) creating genuine confusion. Educational and surprisingly competitive."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 curated phonetic puzzles across words, science, animals, geography, music. 4-button ABCD, 10s timer, 250pts + 150 speed bonus."
+
+- id: idea-098
+  name: "First & Last"
+  description: "TV shows a category and the first+last letter of a word with blanks (Fruit: A_____O). Players guess the word from 4 options that share similar first/last letters."
+  why_fun: "First and last letters narrow it down but not enough — AVOCADO, APRICOT, ARTICHOKE all start with A. The category hint helps but similar-looking distractors keep it tricky. Simple, clean, addictive."
+  complexity: low
+  status: shipped
+  added: 2026-04-06
+  notes: "25 curated puzzles across animals, food, planets, instruments, geography. 4-button ABCD, 8s timer, 200pts + 150 speed bonus. Monospace hint display, word revealed on answer."
